@@ -5,6 +5,8 @@ def application(env, start_response):
             ('Content-Length', '0'),
             ('Remote-Addr', env.get('REMOTE_ADDR')),
             ('Url-Scheme', env.get('wsgi.url_scheme')),
+            ('Forwarded-Value', env.get('HTTP_FORWARDED', '')),
+            ('Request-Host', env.get('HTTP_HOST', '')),
         ],
     )
     return []

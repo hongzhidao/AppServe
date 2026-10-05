@@ -135,9 +135,64 @@ settings are no longer provided. The `/certificates` control API is removed,
 and AppServe no longer loads certificates from the state directory or uploads
 PEM bundles from `/docker-entrypoint.d/`.
 
-Applications can still receive the original HTTPS scheme through a listener's
-`forwarded.protocol` setting. Configure its `source` to match the front-end
-proxy. Application scheme metadata continues to use this forwarded value.
+Applications can still receive the original HTTPS scheme through the standard
+`Forwarded` request header and a listener's `forwarded.trusted` setting, as
+described below.
+
+## Forwarded request metadata
+
+Starting with AppServe 0.2.0, listener forwarding uses the standard HTTP
+`Forwarded` header (RFC 7239). Replace the old listener `client_ip` object and
+the old `forwarded` options (`source`, `client_ip`, `protocol`, `recursive`)
+with:
+
+```json
+{
+  "pass": "applications/app",
+  "forwarded": {
+    "trusted": ["127.0.0.1", "::1", "10.20.0.0/16"]
+  }
+}
+```
+
+`trusted` is required and accepts an IP address or an array of IP addresses
+and CIDRs. Ports, ranges, negated patterns and hostnames are not accepted.
+An empty array trusts nobody; omitting `forwarded` disables processing.
+The original connection peer is always used to authorize header processing.
+IPv4-mapped IPv6 peers also match the corresponding IPv4 trust rules.
+
+Configure the front-end proxy to send, for example:
+
+```http
+Forwarded: for=203.0.113.9;proto=https
+Forwarded: for="[2001:db8::1]:443";proto=https
+```
+
+`for` sets the application's client address and `proto` sets its scheme.
+Only `http` and `https` are applied, case-insensitively. IPv6 addresses must
+be enclosed in brackets and quoted; addresses with ports must also be quoted.
+The header and parameter names are case-insensitive. Quoted strings and
+escaped characters are supported. Other parameters, including `host` and
+`by`, do not change application metadata. The original headers remain
+available to applications.
+
+Multiple header fields form one ordered chain. AppServe walks right to left,
+skipping trusted proxy addresses and selecting the first untrusted address,
+or the leftmost address if all addresses are trusted. The scheme comes only
+from that same element; if it is absent or unsupported, the scheme remains
+`http`. A missing `for`, `unknown`, or an obfuscated node stops traversal,
+preserving the connection peer as the application address and applying only
+that element's supported scheme. No older element is consulted.
+
+Malformed quoting anywhere makes the header unusable. Empty or malformed
+elements, invalid addresses, or duplicate parameter names in the traversed
+part of a chain leave both address and scheme unchanged. Metadata in the
+untrusted prefix does not affect the selected result.
+Headers exceeding 32,767 elements or parameters per element are ignored.
+
+Old configurations are rejected. `X-Forwarded-For`, `X-Real-IP` and
+`X-Forwarded-Proto` no longer change application metadata; migrate the
+front-end proxy to emit `Forwarded` before upgrading.
 
 ## Access logging
 

@@ -17,7 +17,6 @@ typedef struct nxt_http_request_s  nxt_http_request_t;
 
 
 typedef struct nxt_http_pass_s       nxt_http_pass_t;
-typedef struct nxt_http_forward_s    nxt_http_forward_t;
 typedef struct nxt_http_addr_rule_s  nxt_http_addr_rule_t;
 
 
@@ -175,8 +174,7 @@ typedef struct {
 
     uint8_t                discard_unsafe_fields;  /* 1 bit */
 
-    nxt_http_forward_t     *forwarded;
-    nxt_http_forward_t     *client_ip;
+    nxt_http_addr_rule_t   *forwarded;
 
 } nxt_socket_conf_t;
 

@@ -87,6 +87,7 @@ NXT_LIB_SRCS=" \
     src/nxt_http_error.c \
     src/nxt_http_pass.c \
     src/nxt_http_addr.c \
+    src/nxt_http_forwarded.c \
     src/nxt_application.c \
     src/nxt_external.c \
     src/nxt_port_hash.c \
@@ -146,6 +147,7 @@ NXT_TEST_SRCS=" \
     src/test/nxt_utf8_test.c \
     src/test/nxt_rbtree1_test.c \
     src/test/nxt_http_parse_test.c \
+    src/test/nxt_http_forwarded_test.c \
     src/test/nxt_strverscmp_test.c \
     src/test/nxt_base64_test.c \
 "

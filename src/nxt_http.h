@@ -135,6 +135,7 @@ struct nxt_http_request_s {
     nxt_http_field_t                *authorization;
     nxt_off_t                       content_length_n;
 
+    nxt_sockaddr_t                  *peer;
     nxt_sockaddr_t                  *remote;
     nxt_sockaddr_t                  *local;
     nxt_task_t                      task;
@@ -156,7 +157,7 @@ struct nxt_http_request_s {
 
     uint8_t                         app_target;
     nxt_http_protocol_t             protocol:8;   /* 2 bits */
-    uint8_t                         tls;          /* 1 bit, forwarded scheme */
+    uint8_t                         https;        /* 1 bit, effective scheme */
     uint8_t                         header_sent;  /* 1 bit  */
     uint8_t                         error;        /* 1 bit  */
     uint8_t                         websocket_handshake;  /* 1 bit */
@@ -182,20 +183,6 @@ typedef struct {
     void (*ws_frame_start)(nxt_task_t *task, nxt_http_request_t *r,
         nxt_buf_t *ws_frame);
 } nxt_http_proto_table_t;
-
-
-typedef struct {
-    nxt_str_t                   *header;
-    uint32_t                    header_hash;
-} nxt_http_forward_header_t;
-
-
-struct nxt_http_forward_s {
-    nxt_http_forward_header_t   client_ip;
-    nxt_http_forward_header_t   protocol;
-    nxt_http_addr_rule_t        *source;
-    uint8_t                     recursive;    /* 1 bit */
-};
 
 
 #define NXT_HTTP_DATE_LEN  nxt_length("Wed, 31 Dec 1986 16:40:00 GMT")

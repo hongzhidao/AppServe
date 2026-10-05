@@ -270,7 +270,8 @@ nxt_h1p_conn_request_init(nxt_task_t *task, void *obj, void *data)
         r->proto.h1 = h1p;
 
         /* r->protocol = NXT_HTTP_PROTO_H1 is done by zeroing. */
-        r->remote = c->remote;
+        r->peer = c->remote;
+        r->remote = r->peer;
 
         r->task = c->task;
         task = &r->task;

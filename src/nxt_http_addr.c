@@ -326,6 +326,11 @@ nxt_valid_ipv6_blocks(u_char *c, size_t len)
     colon_gap = 0;
 
     while (c != end) {
+        if (*c == '.') {
+            /* The embedded IPv4 suffix is checked by nxt_inet6_addr(). */
+            return 1;
+        }
+
         if (*c == ':') {
             colon_gap = 0;
             c++;

@@ -9,7 +9,7 @@
 #include <nxt_conf.h>
 #include <nxt_status.h>
 #include <nxt_http.h>
-#include <nxt_http_addr.h>
+#include <nxt_http_forwarded.h>
 #include <nxt_port_memory_int.h>
 #include <nxt_unit_request.h>
 #include <nxt_unit_response.h>
@@ -87,10 +87,6 @@ static void nxt_router_conf_send(nxt_task_t *task,
 
 static nxt_int_t nxt_router_conf_create(nxt_task_t *task,
     nxt_router_temp_conf_t *tmcf, u_char *start, u_char *end);
-static nxt_http_forward_t *nxt_router_conf_forward(nxt_task_t *task,
-    nxt_mp_t *mp, nxt_conf_value_t *conf);
-static nxt_int_t nxt_router_conf_forward_header(nxt_mp_t *mp,
-    nxt_conf_value_t *conf, nxt_http_forward_header_t *fh);
 
 static nxt_app_t *nxt_router_app_find(nxt_queue_t *queue, nxt_str_t *name);
 static nxt_int_t nxt_router_apps_hash_test(nxt_lvlhsh_query_t *lhq, void *data);
@@ -1475,7 +1471,7 @@ nxt_router_conf_create(nxt_task_t *task, nxt_router_temp_conf_t *tmcf,
     static nxt_str_t  listeners_path = nxt_string("/listeners");
     static nxt_str_t  websocket_path = nxt_string("/settings/http/websocket");
     static nxt_str_t  forwarded_path = nxt_string("/forwarded");
-    static nxt_str_t  client_ip_path = nxt_string("/client_ip");
+    static nxt_str_t  trusted_path = nxt_string("/trusted");
 
     root = nxt_conf_json_parse(tmcf->mem_pool, start, end, NULL);
     if (root == NULL) {
@@ -1822,18 +1818,10 @@ nxt_router_conf_create(nxt_task_t *task, nxt_router_temp_conf_t *tmcf,
             conf = nxt_conf_get_path(listener, &forwarded_path);
 
             if (conf != NULL) {
-                skcf->forwarded = nxt_router_conf_forward(task, mp, conf);
+                conf = nxt_conf_get_path(conf, &trusted_path);
+                skcf->forwarded = nxt_http_addr_rule_create(mp, conf);
                 if (nxt_slow_path(skcf->forwarded == NULL)) {
-                    return NXT_ERROR;
-                }
-            }
-
-            conf = nxt_conf_get_path(listener, &client_ip_path);
-
-            if (conf != NULL) {
-                skcf->client_ip = nxt_router_conf_forward(task, mp, conf);
-                if (nxt_slow_path(skcf->client_ip == NULL)) {
-                    return NXT_ERROR;
+                    goto fail;
                 }
             }
 
@@ -1876,108 +1864,6 @@ fail:
     } nxt_queue_loop;
 
     return NXT_ERROR;
-}
-
-
-static nxt_http_forward_t *
-nxt_router_conf_forward(nxt_task_t *task, nxt_mp_t *mp, nxt_conf_value_t *conf)
-{
-    nxt_int_t                   ret;
-    nxt_conf_value_t            *header_conf, *client_ip_conf, *protocol_conf;
-    nxt_conf_value_t            *source_conf, *recursive_conf;
-    nxt_http_forward_t          *forward;
-    nxt_http_addr_rule_t        *source;
-
-    static nxt_str_t  header_path = nxt_string("/header");
-    static nxt_str_t  client_ip_path = nxt_string("/client_ip");
-    static nxt_str_t  protocol_path = nxt_string("/protocol");
-    static nxt_str_t  source_path = nxt_string("/source");
-    static nxt_str_t  recursive_path = nxt_string("/recursive");
-
-    header_conf = nxt_conf_get_path(conf, &header_path);
-
-    if (header_conf != NULL) {
-        client_ip_conf = nxt_conf_get_path(conf, &header_path);
-        protocol_conf = NULL;
-
-    } else {
-        client_ip_conf = nxt_conf_get_path(conf, &client_ip_path);
-        protocol_conf = nxt_conf_get_path(conf, &protocol_path);
-    }
-
-    source_conf = nxt_conf_get_path(conf, &source_path);
-    recursive_conf = nxt_conf_get_path(conf, &recursive_path);
-
-    if (source_conf == NULL
-        || (protocol_conf == NULL && client_ip_conf == NULL))
-    {
-        return NULL;
-    }
-
-    forward = nxt_mp_zget(mp, sizeof(nxt_http_forward_t));
-    if (nxt_slow_path(forward == NULL)) {
-        return NULL;
-    }
-
-    source = nxt_http_addr_rule_create(mp, source_conf);
-    if (nxt_slow_path(source == NULL)) {
-        return NULL;
-    }
-
-    forward->source = source;
-
-    if (recursive_conf != NULL) {
-        forward->recursive = nxt_conf_get_boolean(recursive_conf);
-    }
-
-    if (client_ip_conf != NULL) {
-        ret = nxt_router_conf_forward_header(mp, client_ip_conf,
-                                             &forward->client_ip);
-        if (nxt_slow_path(ret != NXT_OK)) {
-            return NULL;
-        }
-    }
-
-    if (protocol_conf != NULL) {
-        ret = nxt_router_conf_forward_header(mp, protocol_conf,
-                                             &forward->protocol);
-        if (nxt_slow_path(ret != NXT_OK)) {
-            return NULL;
-        }
-    }
-
-    return forward;
-}
-
-
-static nxt_int_t
-nxt_router_conf_forward_header(nxt_mp_t *mp, nxt_conf_value_t *conf,
-    nxt_http_forward_header_t *fh)
-{
-    char       c;
-    size_t     i;
-    uint32_t   hash;
-    nxt_str_t  header;
-
-    nxt_conf_get_string(conf, &header);
-
-    fh->header = nxt_str_dup(mp, NULL, &header);
-    if (nxt_slow_path(fh->header == NULL)) {
-        return NXT_ERROR;
-    }
-
-    hash = NXT_HTTP_FIELD_HASH_INIT;
-
-    for (i = 0; i < fh->header->length; i++) {
-        c = fh->header->start[i];
-        hash = nxt_http_field_hash_char(hash, nxt_lowcase(c));
-    }
-
-    hash = nxt_http_field_hash_end(hash) & 0xFFFF;
-
-    fh->header_hash = hash;
-
-    return NXT_OK;
 }
 
 
@@ -4897,7 +4783,7 @@ nxt_router_prepare_msg(nxt_task_t *task, nxt_http_request_t *r,
                    nxt_sockaddr_port_length(r->local));
     *p++ = '\0';
 
-    req->tls = r->tls;
+    req->tls = r->https;
     req->websocket_handshake = r->websocket_handshake;
 
     req->server_name_length = r->server_name.length;

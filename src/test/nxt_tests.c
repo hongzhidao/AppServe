@@ -38,6 +38,12 @@ main(int argc, char **argv)
     thr = nxt_thread();
     thr->task = &task;
 
+    if (nxt_process_argv[1] != NULL
+        && strcmp(nxt_process_argv[1], "forwarded") == 0)
+    {
+        return nxt_http_forwarded_test(thr) != NXT_OK;
+    }
+
 #if (NXT_TEST_RTDTSC)
 
     if (nxt_process_argv[1] != NULL
@@ -155,6 +161,10 @@ main(int argc, char **argv)
     }
 
     if (nxt_http_parse_test(thr) != NXT_OK) {
+        return 1;
+    }
+
+    if (nxt_http_forwarded_test(thr) != NXT_OK) {
         return 1;
     }
 
