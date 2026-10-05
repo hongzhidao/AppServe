@@ -25,12 +25,7 @@ BASEDIR = $(CURDIR)
 
 DOTESTS = 0
 
-njs:
-	dh_testdir
-	cd pkg/contrib && make .njs
-	touch $@
-
-config.env.%: njs
+config.env.%:
 	dh_testdir
 	mkdir -p $(BUILDDIR_$*)
 	cp -Pa $(CURDIR)/auto $(BUILDDIR_$*)/
@@ -50,7 +45,6 @@ config.env.%: njs
 
 configure.unit: config.env.unit
 	cd $(BUILDDIR_unit) && \
-	PKG_CONFIG_PATH=$(CURDIR)/pkg/contrib/njs/build \
 	CFLAGS= ./configure \
 		%%CONFIGURE_ARGS%% \
 		--modules=/usr/lib/appserve/modules \
@@ -61,7 +55,6 @@ configure.unit: config.env.unit
 
 configure.unit_debug: config.env.unit_debug
 	cd $(BUILDDIR_unit_debug) && \
-	PKG_CONFIG_PATH=$(CURDIR)/pkg/contrib/njs/build \
 	CFLAGS= ./configure \
 		%%CONFIGURE_ARGS%% \
 		--modules=/usr/lib/appserve/debug-modules \

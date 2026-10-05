@@ -9,8 +9,6 @@
 #include <nxt_http.h>
 
 
-static void nxt_http_pass_var(nxt_task_t *task, nxt_http_request_t *r,
-    nxt_http_pass_t *pass);
 static nxt_int_t nxt_http_pass_find(nxt_mp_t *mp, nxt_router_conf_t *rtcf,
     nxt_str_t *value, nxt_http_pass_t *pass);
 
@@ -19,7 +17,6 @@ nxt_http_pass_t *
 nxt_http_pass_create(nxt_router_temp_conf_t *tmcf, nxt_str_t *value)
 {
     nxt_int_t          ret;
-    nxt_str_t          str;
     nxt_http_pass_t    *pass;
     nxt_router_conf_t  *rtcf;
 
@@ -30,21 +27,9 @@ nxt_http_pass_create(nxt_router_temp_conf_t *tmcf, nxt_str_t *value)
         return NULL;
     }
 
-    pass->u.tstr = nxt_tstr_compile(rtcf->tstr_state, value, 0);
-    if (nxt_slow_path(pass->u.tstr == NULL)) {
+    ret = nxt_http_pass_find(tmcf->mem_pool, rtcf, value, pass);
+    if (nxt_slow_path(ret != NXT_OK)) {
         return NULL;
-    }
-
-    if (nxt_tstr_is_const(pass->u.tstr)) {
-        nxt_tstr_str(pass->u.tstr, &str);
-
-        ret = nxt_http_pass_find(tmcf->mem_pool, rtcf, &str, pass);
-        if (nxt_slow_path(ret != NXT_OK)) {
-            return NULL;
-        }
-
-    } else {
-        pass->handler = nxt_http_pass_var;
     }
 
     return pass;
@@ -68,53 +53,6 @@ nxt_http_pass_application(nxt_router_conf_t *rtcf, nxt_str_t *name)
     }
 
     return pass;
-}
-
-
-static void
-nxt_http_pass_var(nxt_task_t *task, nxt_http_request_t *r, nxt_http_pass_t *pass)
-{
-    nxt_int_t          ret;
-    nxt_str_t          value;
-    nxt_http_pass_t    *resolved;
-    nxt_router_conf_t  *rtcf;
-
-    rtcf = r->conf->socket_conf->router_conf;
-
-    ret = nxt_tstr_query_init(&r->tstr_query, rtcf->tstr_state, &r->tstr_cache,
-                              r, r->mem_pool);
-    if (nxt_slow_path(ret != NXT_OK)) {
-        goto fail;
-    }
-
-    ret = nxt_tstr_query(task, r->tstr_query, pass->u.tstr, &value);
-    if (nxt_slow_path(ret != NXT_OK)) {
-        goto fail;
-    }
-
-    nxt_debug(task, "http pass lookup: %V", &value);
-
-    resolved = nxt_mp_zalloc(r->mem_pool, sizeof(nxt_http_pass_t));
-    if (nxt_slow_path(resolved == NULL)) {
-        goto fail;
-    }
-
-    ret = nxt_http_pass_find(r->mem_pool, rtcf, &value, resolved);
-    if (ret == NXT_DECLINED) {
-        nxt_http_request_error(task, r, NXT_HTTP_NOT_FOUND);
-        return;
-    }
-
-    if (nxt_slow_path(ret != NXT_OK)) {
-        goto fail;
-    }
-
-    resolved->handler(task, r, resolved);
-    return;
-
-fail:
-
-    nxt_http_request_error(task, r, NXT_HTTP_INTERNAL_SERVER_ERROR);
 }
 
 

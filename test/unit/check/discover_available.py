@@ -1,18 +1,12 @@
-import subprocess
 import sys
 
 from unit.check.go import check_go
 from unit.check.isolation import check_isolation
-from unit.check.njs import check_njs
 from unit.log import Log
 from unit.option import option
 
 
 def discover_available(unit):
-    output_version = subprocess.check_output(
-        [unit['appserved'], '--version'], stderr=subprocess.STDOUT
-    ).decode()
-
     # wait for controller start
 
     if Log.wait_for_record(r'controller started') is None:
@@ -29,7 +23,6 @@ def discover_available(unit):
     # discover modules using check
 
     option.available['modules']['go'] = check_go()
-    option.available['modules']['njs'] = check_njs(output_version)
 
     # Discover features using check. Features should be discovered after
     # modules since some features can require modules.

@@ -145,9 +145,7 @@ CONFIGURE_ARGS_COMMON=\
 	--group=appserve \
 	--tests
 
-CONFIGURE_ARGS=\
-	$(CONFIGURE_ARGS_COMMON) \
-	--njs
+CONFIGURE_ARGS=$(CONFIGURE_ARGS_COMMON)
 
 export CR=\\n
 
@@ -207,7 +205,7 @@ endif
 rpmbuild/SOURCES/appserve-$(VERSION).tar.gz:
 	cd ../.. && tar -czf pkg/rpm/rpmbuild/SOURCES/appserve-$(VERSION).tar.gz \
 		--transform "s#^#appserve-$(VERSION)/#" \
-		LICENSE NOTICE CHANGES README configure auto src test version go pkg/contrib docs/man/appserved.8.in docs/migration.md
+		LICENSE NOTICE CHANGES README configure auto src test version go docs/man/appserved.8.in docs/migration.md
 
 appserve: check-build-depends-appserve rpmbuild/SPECS/appserve.spec rpmbuild/SOURCES/appserve-$(VERSION).tar.gz
 	@echo "===> Building $@ package" ; \

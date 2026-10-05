@@ -40,8 +40,6 @@ cat << END
   --no-ipv6            disable IPv6 support
   --no-unix-sockets    disable Unix domain sockets support
 
-  --njs                enable NJS library usage
-
   --debug              enable debug logging
 
 

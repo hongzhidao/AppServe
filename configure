@@ -160,9 +160,5 @@ END
 NXT_LIB_AUX_CFLAGS=
 NXT_LIB_AUX_LIBS=
 
-if [ $NXT_NJS != NO ]; then
-    . auto/njs
-fi
-
 . auto/make
 . auto/summary

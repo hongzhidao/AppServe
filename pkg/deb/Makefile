@@ -87,9 +87,7 @@ CONFIGURE_ARGS_COMMON=\
 	--group=appserve \
 	--tests
 
-CONFIGURE_ARGS=\
-	$(CONFIGURE_ARGS_COMMON) \
-	--njs
+CONFIGURE_ARGS=$(CONFIGURE_ARGS_COMMON)
 
 export CR=\\n
 
@@ -161,7 +159,7 @@ endif
 debuild/appserve_$(VERSION).orig.tar.gz: | debuild/$(SRCDIR)/debian
 	cd ../.. && tar -czf pkg/deb/debuild/$(SRCDIR).tar.gz \
 		--transform "s#^#$(SRCDIR)/#" \
-		LICENSE NOTICE CHANGES README configure auto src test version go pkg/contrib docs/man/appserved.8.in docs/migration.md
+		LICENSE NOTICE CHANGES README configure auto src test version go docs/man/appserved.8.in docs/migration.md
 	mv debuild/$(SRCDIR).tar.gz debuild/appserve_$(VERSION).orig.tar.gz
 	cd debuild && tar zxf appserve_$(VERSION).orig.tar.gz
 

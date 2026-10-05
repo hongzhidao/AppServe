@@ -208,11 +208,11 @@ def test_status_applications():
     check_application('restart', 0, 1, 0, 1)
     check_application('delayed', 0, 0, 0, 0)
 
-def test_status_dynamic_application():
+def test_status_fixed_application():
     assert 'success' in client.conf(
         {
             "listeners": {
-                "*:8080": {"pass": "applications/$arg_app"},
+                "*:8080": {"pass": "applications/empty"},
                 "*:8081": {"pass": "applications/empty"},
             },
             "applications": {
@@ -223,9 +223,9 @@ def test_status_dynamic_application():
 
     Status.init()
 
-    assert client.get(url='/?app=empty')['status'] == 200
+    assert client.get()['status'] == 200
     check_connections(1, 0, 0, 1)
-    assert Status.get('/requests/total') == 1, 'dynamic application'
-    assert client.get(url='/?app=missing')['status'] == 404
+    assert Status.get('/requests/total') == 1, 'fixed application'
+    assert client.get(url='/different')['status'] == 200
     check_connections(2, 0, 0, 2)
-    assert Status.get('/requests/total') == 2, 'missing dynamic application'
+    assert Status.get('/requests/total') == 2, 'fixed application different URI'

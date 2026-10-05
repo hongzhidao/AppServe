@@ -27,7 +27,6 @@ AppServe configuration summary:
 
   IPv6 support: .............. $NXT_INET6
   Unix domain sockets support: $NXT_UNIX_DOMAIN
-  NJS support: ............... $NXT_NJS
 
   process isolation: ......... $NXT_ISOLATION
 

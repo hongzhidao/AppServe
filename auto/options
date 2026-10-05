@@ -16,8 +16,6 @@ NXT_DEBUG=NO
 NXT_INET6=YES
 NXT_UNIX_DOMAIN=YES
 
-NXT_NJS=NO
-
 NXT_TEST_BUILD_EPOLL=NO
 NXT_TEST_BUILD_EVENTPORT=NO
 NXT_TEST_BUILD_DEVPOLL=NO
@@ -67,8 +65,6 @@ do
 
         --no-ipv6)                       NXT_INET6=NO                        ;;
         --no-unix-sockets)               NXT_UNIX_DOMAIN=NO                  ;;
-
-        --njs)                           NXT_NJS=YES                         ;;
 
         --test-build-epoll)              NXT_TEST_BUILD_EPOLL=YES            ;;
         --test-build-eventport)          NXT_TEST_BUILD_EVENTPORT=YES        ;;

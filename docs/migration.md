@@ -84,14 +84,26 @@ request matching, redirects, and custom responses to the application or
 front-end proxy.
 
 Listeners pass requests directly to `applications/<name>` or
-`applications/<name>/<target>`. Request variables and NJS expressions remain
-available in listener `pass` values, including dynamic application and target
-selection. Unknown dynamic destinations return HTTP 404. The legacy listener
-`application` setting also remains supported.
+`applications/<name>/<target>`. The legacy listener `application` setting also
+remains supported.
 
 The routing-specific PCRE/PCRE2 dependency and the `--no-regex` and
-`--no-pcre2` configure options are removed. JavaScript regular expressions in
-NJS expressions remain available.
+`--no-pcre2` configure options are removed.
+
+## Variables and JavaScript
+
+Configuration variables and NJS expressions are removed starting with AppServe
+0.2.0. Listener `pass` values must name a fixed application and optional target.
+Replace `$variable`, `${variable}`, and backtick JavaScript expressions with
+`applications/<name>` or `applications/<name>/<target>` before upgrading.
+Dynamic application and target selection must be handled by the application
+or front-end proxy. Percent-encode special characters in fixed application
+and target names.
+
+Remove `settings/js_module` from existing configurations. The `/js_modules`
+control API, JavaScript module storage, and the `--njs` configure option are
+removed. AppServe no longer creates or loads the state directory's `scripts/`
+subdirectory.
 
 ## Static file serving
 
@@ -136,8 +148,7 @@ setting, including an empty object, are rejected as having an unknown
 parameter. Record HTTP access logs in the application or front-end proxy.
 
 The access-log response variables `$status`, `$body_bytes_sent`, and
-`$response_header_*` are also removed. Request variables remain available in
-dynamic listener `pass` values.
+`$response_header_*` are also removed.
 
 Daemon and application diagnostic output still uses `appserve.log`, and
 `SIGUSR1` continues to reopen that log for rotation.

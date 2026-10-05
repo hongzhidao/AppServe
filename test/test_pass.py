@@ -1,5 +1,4 @@
 import json
-from urllib.parse import quote
 
 import pytest
 from unit.applications.lang.python import ApplicationPython
@@ -86,7 +85,7 @@ def test_listener_route_options_unsupported(parameter, value):
 
 
 @pytest.mark.parametrize(
-    'name', ['%', 'blah/blah', '/blah//blah/', ' blah%2Fblah~']
+    'name', ['%', 'blah/blah', '/blah//blah/', ' blah%2Fblah~', '$method', '`app`']
 )
 def test_pass_application_encoded(name):
     client.load('empty', name=name)
@@ -122,28 +121,58 @@ def test_pass_application_update():
     assert client.get()['status'] == 200
 
 
-@pytest.mark.parametrize('value', ['applications/empty/missing',
-                                  'applications/empty/target/extra',
-                                  'applications/missing', 'routes/main'])
-def test_pass_dynamic_invalid(value):
-    assert 'success' in client.conf({'pass': '$arg_pass'}, 'listeners/*:8080')
-    assert client.get(url='/?pass=' + quote(value, safe=''))['status'] == 404
-    assert client.get(url='/?pass=applications/empty')['status'] == 200
+@pytest.mark.parametrize(
+    'value',
+    [
+        '$arg_pass',
+        'applications/$method',
+        'applications/${host}',
+        'applications/empty/$arg_target',
+        'applications/empty${uri}',
+        '`applications/${host}`',
+        '`applications/empty`',
+    ],
+)
+@pytest.mark.parametrize('path', ['listeners/*:8080', 'listeners/*:8080/pass'])
+def test_pass_dynamic_unsupported(value, path):
+    before = client.conf_get()
+    conf = json.dumps(value) if path.endswith('/pass') else {'pass': value}
+
+    result = client.conf(conf, path)
+
+    assert 'error' in result
+    assert result['detail'] == (
+        'The "pass" value must be a fixed application destination.'
+    )
+    assert client.conf_get() == before
+    assert client.get()['status'] == 200
 
 
-def test_pass_dynamic_target():
+def test_pass_target_update():
     app = client.conf_get('applications/empty')
     del app['module']
     app['targets'] = {'first': {'module': 'wsgi'}, 'second': {'module': 'wsgi'}}
     assert 'success' in client.conf(app, 'applications/empty')
     assert 'success' in client.conf(
-        {'pass': 'applications/empty/$arg_target'}, 'listeners/*:8080'
+        {'pass': 'applications/empty/first'}, 'listeners/*:8080'
     )
 
-    assert client.get(url='/?target=missing')['status'] == 404
-    assert client.get(url='/?target=first')['status'] == 200
-    assert client.get(url='/?target=second')['status'] == 200
+    before = client.conf_get()
+    assert 'error' in client.conf(
+        {'pass': 'applications/empty/missing'}, 'listeners/*:8080'
+    )
+    assert client.conf_get() == before
+    assert client.get()['status'] == 200
+
+    assert 'success' in client.conf(
+        {'pass': 'applications/empty/second'}, 'listeners/*:8080'
+    )
+    assert client.get()['status'] == 200
+
+    assert 'error' in client.conf_delete('applications/empty/targets/second')
+    assert 'success' in client.conf(
+        {'pass': 'applications/empty/first'}, 'listeners/*:8080'
+    )
 
     assert 'success' in client.conf_delete('applications/empty/targets/second')
-    assert client.get(url='/?target=second')['status'] == 404
-    assert client.get(url='/?target=first')['status'] == 200
+    assert client.get()['status'] == 200

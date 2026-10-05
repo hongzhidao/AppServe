@@ -69,9 +69,6 @@ Library and include files required for AppServe modules development.
 %setup -q
 
 %build
-%{__make} %{?_smp_mflags} -C pkg/contrib .njs
-
-PKG_CONFIG_PATH=%{bdir}/pkg/contrib/njs/build \
 ./configure \
 	%{CONFIGURE_ARGS} \
 	--modules=%{_libdir}/appserve/debug-modules \
@@ -84,7 +81,6 @@ PKG_CONFIG_PATH=%{bdir}/pkg/contrib/njs/build \
 %{__make} %{?_smp_mflags} build/libunit.a
 %{__mv} build build-debug
 
-PKG_CONFIG_PATH=%{bdir}/pkg/contrib/njs/build \
 ./configure \
 	%{CONFIGURE_ARGS} \
 	--modules=%{_libdir}/appserve/modules \

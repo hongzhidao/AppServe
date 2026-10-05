@@ -80,6 +80,38 @@ def test_access_log_unsupported(access_log, path):
     assert client.conf_get() == before, 'configuration unchanged'
     assert client.get()['status'] == 200, 'original route still works'
 
+@pytest.mark.parametrize('js_module', ['next', ['next'], []])
+def test_js_module_unsupported(js_module):
+    assert 'success' in try_addr('*:8080')
+    assert 'success' in client.conf({}, 'settings')
+    before = client.conf_get()
+
+    result = client.conf(json.dumps(js_module), 'settings/js_module')
+
+    assert 'error' in result, 'unsupported js_module configuration'
+    assert result['detail'] == 'Unknown parameter "js_module".'
+    assert client.conf_get() == before
+    assert client.get()['status'] == 200
+
+@pytest.mark.parametrize('method', ['GET', 'PUT', 'DELETE'])
+@pytest.mark.parametrize('path', ['/js_modules', '/js_modules/next'])
+def test_js_modules_api_unsupported(method, path):
+    assert 'success' in try_addr('*:8080')
+    before = client.conf_get()
+
+    result = client.http(
+        method,
+        url=path,
+        sock_type='unix',
+        addr=option.temp_dir + '/control.appserve.sock',
+        body='export default {}; ' if method == 'PUT' else '',
+    )
+
+    assert result['status'] == 404
+    assert 'js_modules' not in client.conf_get('/')
+    assert client.conf_get() == before
+    assert client.get()['status'] == 200
+
 def test_json_empty():
     assert 'error' in client.conf(''), 'empty'
 
