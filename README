@@ -7,7 +7,9 @@ systems.  It runs applications in multiple languages and exposes a control
 API for configuration at runtime.
 
 Listeners pass requests directly to applications and application targets.
-Listener pass values can use request variables and NJS expressions.
+Listener pass values name a fixed application and optional target.  Python,
+PHP, Ruby, Go, and external applications are supported.  Use a front-end
+proxy for TLS termination, request routing, static files, and access logging.
 
 AppServe continues the development and maintenance of NGINX Unit.
 
@@ -32,7 +34,7 @@ See docs/migration.md for changes to executable names, packages, services,
 and default paths when migrating from Unit.  Existing language binding and
 libunit API names are retained for source compatibility.
 
-See docs/release-notes.md for the 0.1.0 release and its verification status.
+See docs/release-notes.md for the 0.2.0 release and its verification status.
 
 The upstream Unit documentation remains a reference for the inherited
 configuration API and application support:

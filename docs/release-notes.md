@@ -1,3 +1,76 @@
+# AppServe 0.2.0
+
+Release date: October 5, 2026.
+
+AppServe 0.2.0 focuses on serving applications behind a front-end proxy.
+Listeners pass requests directly to fixed applications and application targets.
+Python, PHP, Ruby, Go, and external applications remain supported.
+
+## Changes
+
+- Removed Java/Servlet/JSP, Node.js `unit-http`, and Perl/PSGI support,
+  including their packages and container images.
+- Removed built-in routing, route actions, configuration variables, NJS
+  expressions, and JavaScript module storage and control APIs.
+- Removed built-in TLS and certificate management, static file serving,
+  reverse proxying, upstream load balancing, and access logging.
+- Removed the OpenSSL, PCRE/PCRE2, and NJS dependencies and their configure
+  options.
+- Added standard HTTP `Forwarded` header processing (RFC 7239). A listener's
+  `forwarded.trusted` IP/CIDR rules authorize proxy metadata. Client address
+  and scheme come from the same selected chain element; the connection peer
+  remains the trust anchor.
+- Removed unused job, cache, buffer filter, buffer pool, fiber, memory zone,
+  vector, time parsing, and sendfile code. Connection output uses memory
+  buffers; large request bodies still use temporary files passed to applications.
+
+## Migration
+
+This release changes the supported configuration. Remove obsolete settings
+before upgrading; configurations containing them are rejected. Use an
+application or front-end proxy for the removed HTTP features, and replace
+legacy `client_ip` and `forwarded` options with `forwarded.trusted`. Configure
+the proxy to emit `Forwarded`; `X-Forwarded-For`, `X-Real-IP`, and
+`X-Forwarded-Proto` no longer change application metadata.
+
+See [the migration guide](migration.md) for configuration examples and the
+full list of removed settings. The `nxt_unit_*` API and retained binding
+identifiers keep their names; rebuild modules and external applications
+against the deployed version.
+
+## Verification
+
+Verified on Linux aarch64 with GCC 13.3.0 and Python 3.12.3:
+
+- The daemon, Python module, and C test programs built successfully.
+- C tests, including the Forwarded parser tests, and the UTF-8 filename
+  test passed.
+- Configuration, HTTP, Forwarded, Python/ASGI, application targets,
+  environment, process management, status, log rotation, and respawn
+  regressions passed in the default test mode: **369 passed, 16 skipped**,
+  including an isolated rerun of the status tests after a transient
+  connection-counter assertion.
+- Staged installation and uninstallation passed for the daemon, manpage,
+  Python module, `libunit`, headers, and pkg-config file.
+- The AppServe XML changelog validated, and generated text and package
+  changelogs were checked.
+- The source distribution was extracted and built successfully, C tests
+  passed, and its SHA-512 checksum was verified.
+
+PHP, Ruby, and Go were not runtime-tested for this release. Docker images
+and Debian/RPM binary packages were not built.
+
+## Known issues
+
+The inherited `--restart`-mode shutdown alert in
+`test_python_restart_longstart` and intermittent listener port-release
+regression reported for 0.1.0 have not been addressed by this release.
+
+`test_status_fixed_application` can read connection counters before the
+asynchronous connection close is reflected. It failed once during this
+release's full regression run; all five status tests passed when rerun
+in isolation.
+
 # AppServe 0.1.0
 
 Release date: October 5, 2026.
@@ -18,7 +91,7 @@ https://github.com/hongzhidao/AppServe is currently private.
   retain their names for application source compatibility.
 
 See [the migration guide](migration.md) for deployment changes. Original
-copyright notices and Unit release history are retained.
+copyright notices are retained.
 
 ## Verification
 
