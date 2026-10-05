@@ -4,7 +4,6 @@ import sys
 from unit.check.go import check_go
 from unit.check.isolation import check_isolation
 from unit.check.njs import check_njs
-from unit.check.regex import check_regex
 from unit.log import Log
 from unit.option import option
 
@@ -31,7 +30,6 @@ def discover_available(unit):
 
     option.available['modules']['go'] = check_go()
     option.available['modules']['njs'] = check_njs(output_version)
-    option.available['modules']['regex'] = check_regex(output_version)
 
     # Discover features using check. Features should be discovered after
     # modules since some features can require modules.

@@ -2,53 +2,46 @@ import json
 from urllib.parse import quote
 
 import pytest
-from unit.applications.proto import ApplicationProto
+from unit.applications.lang.python import ApplicationPython
 
-prerequisites = {'modules': {'njs': 'any'}}
+prerequisites = {'modules': {'njs': 'any', 'python': 'any'}}
 
 
-client = ApplicationProto()
+client = ApplicationPython()
 
 
 @pytest.fixture(autouse=True)
 def setup_method_fixture():
-    assert 'success' in client.conf(
-        {
-            "listeners": {"*:8080": {"pass": "routes/entry"}},
-            "routes": {
-                "entry": [{"action": {"pass": "routes/result"}}],
-                "result": [{"action": {"return": 200}}],
-            },
-        }
-    )
+    client.load('empty')
 
-def create_routes(*names):
+def create_applications(*names):
+    app = client.conf_get('applications/empty')
     for name in names:
         assert 'success' in client.conf(
-            [{"action": {"return": 200}}], f'routes/{quote(name, safe="")}'
+            app, f'applications/{quote(name, safe="")}'
         )
 
 def set_pass(template):
     assert 'success' in client.conf(
-        json.dumps(template), 'routes/entry/0/action/pass'
+        json.dumps(template), 'listeners/*:8080/pass'
     )
 
 def check_expression(expression, url='/'):
-    set_pass('`routes' + expression + '`')
+    set_pass('`applications' + expression + '`')
     assert client.get(url=url)['status'] == 200
 
 def test_njs_template_string():
-    create_routes('str', '`string`', '`backtick', 'l1\nl2')
+    create_applications('str', '`string`', '`backtick', 'l1\nl2')
 
     check_expression('/str')
     check_expression('/\\`backtick')
     check_expression('/l1\\nl2')
 
-    set_pass('routes/`string`')
+    set_pass('applications/`string`')
     assert client.get()['status'] == 200
 
 def test_njs_template_expression():
-    create_routes('str', 'localhost')
+    create_applications('str', 'localhost')
 
     check_expression('${uri}', '/str')
     check_expression('${uri}${host}')
@@ -56,19 +49,19 @@ def test_njs_template_expression():
     check_expression('${uri + `${host}`}')
 
 def test_njs_iteration():
-    create_routes('Connection,Host', 'close,localhost')
+    create_applications('Connection,Host', 'close,localhost')
 
     check_expression('/${Object.keys(headers).sort().join()}')
     check_expression('/${Object.values(headers).sort().join()}')
 
 def test_njs_variables():
-    create_routes('str', 'localhost', '127.0.0.1')
+    create_applications('str', 'localhost', '127.0.0.1')
 
     check_expression('/${host}')
     check_expression('/${remoteAddr}')
     check_expression('/${headers.Host}')
 
-    set_pass('`routes/${cookies.foo}`')
+    set_pass('`applications/${cookies.foo}`')
     assert (
         client.get(headers={'Cookie': 'foo=str', 'Connection': 'close'})[
             'status'
@@ -76,25 +69,25 @@ def test_njs_variables():
         == 200
     ), 'cookies'
 
-    set_pass('`routes/${args.foo}`')
+    set_pass('`applications/${args.foo}`')
     assert client.get(url='/?foo=str')['status'] == 200, 'args'
 
     check_expression('/${vars.header_host}')
     check_expression('${vars.uri}', '/str')
 
-    set_pass('`routes/${vars["arg_foo"]}`')
+    set_pass('`applications/${vars["arg_foo"]}`')
     assert client.get(url='/?foo=str')['status'] == 200, 'vars'
 
-    set_pass('`routes/${vars.non_exist}`')
+    set_pass('`applications/${vars.non_exist}`')
     assert client.get()['status'] == 404, 'undefined'
 
-    create_routes('undefined')
+    create_applications('undefined')
     assert client.get()['status'] == 200, 'undefined 2'
 
 
 def test_njs_variables_cacheable():
-    create_routes('localhost-localhost', 'example.com-example.com')
-    set_pass('`routes/${vars.host}-${vars.host}`')
+    create_applications('localhost-localhost', 'example.com-example.com')
+    set_pass('`applications/${vars.host}-${vars.host}`')
 
     for _ in range(25):
         assert client.get()['status'] == 200
@@ -108,7 +101,7 @@ def test_njs_invalid(skip_alert):
 
     def check_invalid(template):
         assert 'error' in client.conf(
-            json.dumps(template), 'routes/entry/0/action/pass'
+            json.dumps(template), 'listeners/*:8080/pass'
         )
 
     check_invalid('`a')

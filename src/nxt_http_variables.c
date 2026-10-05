@@ -347,6 +347,11 @@ nxt_http_var_request_id(nxt_task_t *task, nxt_str_t *str, void *ctx,
 
     r = ctx;
 
+    if (r->request_id.start != NULL) {
+        *str = r->request_id;
+        return NXT_OK;
+    }
+
     str->start = nxt_mp_nget(r->mem_pool, 32);
     if (nxt_slow_path(str->start == NULL)) {
         return NXT_ERROR;
@@ -359,6 +364,8 @@ nxt_http_var_request_id(nxt_task_t *task, nxt_str_t *str, void *ctx,
     (void) nxt_sprintf(str->start, str->start + 32, "%08xD%08xD%08xD%08xD",
                        nxt_random(rand), nxt_random(rand),
                        nxt_random(rand), nxt_random(rand));
+
+    r->request_id = *str;
 
     return NXT_OK;
 }

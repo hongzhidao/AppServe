@@ -130,6 +130,27 @@ def test_client_ip_empty_source():
 
     assert get_xff('1.1.1.1') == '127.0.0.1', 'empty source'
 
+@pytest.mark.parametrize(
+    'source, ipv4, ipv6',
+    [
+        ('127.0.0.0/8', True, False),
+        ('::/0', False, True),
+        ('::1/128', False, True),
+        ('::/127', False, True),
+        ('::-::1', False, True),
+        ('*:0-65535', True, True),
+        ('127.0.0.1:0', False, False),
+        (['127.0.0.0/8', '!127.0.0.1'], False, False),
+        (['!127.0.0.1', '::1'], False, True),
+        (['!10.0.0.0/8', '!::2'], True, True),
+    ],
+)
+def test_client_ip_source_patterns(source, ipv4, ipv6):
+    client_ip({'header': 'X-Forwarded-For', 'source': source})
+
+    assert get_xff('1.1.1.1') == ('1.1.1.1' if ipv4 else '127.0.0.1')
+    assert get_xff('1.1.1.1', 'ipv6') == ('1.1.1.1' if ipv6 else '::1')
+
 def test_client_ip_invalid():
     assert 'error' in client.conf(
         {

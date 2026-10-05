@@ -5,7 +5,18 @@
  */
 
 #include <nxt_main.h>
-#include <nxt_http_route_addr.h>
+#include <nxt_http_addr.h>
+
+
+struct nxt_http_addr_rule_s {
+    uint32_t                 items;
+    nxt_http_addr_pattern_t  pattern[0];
+};
+
+
+static int nxt_http_addr_pattern_compare(const void *one, const void *two);
+static nxt_bool_t nxt_http_addr_pattern_match(nxt_http_addr_pattern_t *p,
+    nxt_sockaddr_t *sa);
 
 
 #if (NXT_INET6)
@@ -14,14 +25,14 @@ static nxt_bool_t nxt_valid_ipv6_blocks(u_char *c, size_t len);
 
 
 nxt_int_t
-nxt_http_route_addr_pattern_parse(nxt_mp_t *mp,
-    nxt_http_route_addr_pattern_t *pattern, nxt_conf_value_t *cv)
+nxt_http_addr_pattern_parse(nxt_mp_t *mp,
+    nxt_http_addr_pattern_t *pattern, nxt_conf_value_t *cv)
 {
-    u_char                       *delim;
-    nxt_int_t                    ret, cidr_prefix;
-    nxt_str_t                    addr, port;
-    nxt_http_route_addr_base_t   *base;
-    nxt_http_route_addr_range_t  *inet;
+    u_char                *delim;
+    nxt_int_t             ret, cidr_prefix;
+    nxt_str_t             addr, port;
+    nxt_http_addr_base_t   *base;
+    nxt_http_addr_range_t  *inet;
 
     if (nxt_conf_type(cv) != NXT_CONF_STRING) {
         return NXT_ADDR_PATTERN_CV_TYPE_ERROR;
@@ -51,17 +62,17 @@ nxt_http_route_addr_pattern_parse(nxt_mp_t *mp,
         port.start = addr.start + 2;
         port.length = addr.length - 2;
         base->addr_family = AF_UNSPEC;
-        base->match_type = NXT_HTTP_ROUTE_ADDR_ANY;
+        base->match_type = NXT_HTTP_ADDR_ANY;
 
         goto parse_port;
     }
 
     if (nxt_inet6_probe(&addr)) {
 #if (NXT_INET6)
-        u_char                           *end;
-        uint8_t                          i;
-        nxt_int_t                        len;
-        nxt_http_route_in6_addr_range_t  *inet6;
+        u_char                    *end;
+        uint8_t                   i;
+        nxt_int_t                 len;
+        nxt_http_in6_addr_range_t  *inet6;
 
         base->addr_family = AF_INET6;
 
@@ -111,7 +122,7 @@ nxt_http_route_addr_pattern_parse(nxt_mp_t *mp,
                 return NXT_ADDR_PATTERN_RANGE_OVERLAP_ERROR;
             }
 
-            base->match_type = NXT_HTTP_ROUTE_ADDR_RANGE;
+            base->match_type = NXT_HTTP_ADDR_RANGE;
 
             goto parse_port;
         }
@@ -137,18 +148,18 @@ nxt_http_route_addr_pattern_parse(nxt_mp_t *mp,
             }
 
             if (nxt_slow_path(cidr_prefix == 0)) {
-                base->match_type = NXT_HTTP_ROUTE_ADDR_ANY;
+                base->match_type = NXT_HTTP_ADDR_ANY;
 
                 goto parse_port;
             }
 
             if (nxt_slow_path(cidr_prefix == 128)) {
-                base->match_type = NXT_HTTP_ROUTE_ADDR_EXACT;
+                base->match_type = NXT_HTTP_ADDR_EXACT;
 
                 goto parse_port;
             }
 
-            base->match_type = NXT_HTTP_ROUTE_ADDR_CIDR;
+            base->match_type = NXT_HTTP_ADDR_CIDR;
 
             for (i = 0; i < sizeof(struct in6_addr); i++) {
                 if (cidr_prefix >= 8) {
@@ -173,7 +184,7 @@ nxt_http_route_addr_pattern_parse(nxt_mp_t *mp,
             goto parse_port;
         }
 
-        base->match_type = NXT_HTTP_ROUTE_ADDR_EXACT;
+        base->match_type = NXT_HTTP_ADDR_EXACT;
 
         if (nxt_slow_path(!nxt_valid_ipv6_blocks(addr.start, addr.length))) {
             return NXT_ADDR_PATTERN_FORMAT_ERROR;
@@ -219,7 +230,7 @@ nxt_http_route_addr_pattern_parse(nxt_mp_t *mp,
             return NXT_ADDR_PATTERN_RANGE_OVERLAP_ERROR;
         }
 
-        base->match_type = NXT_HTTP_ROUTE_ADDR_RANGE;
+        base->match_type = NXT_HTTP_ADDR_RANGE;
 
         goto parse_port;
     }
@@ -241,13 +252,13 @@ nxt_http_route_addr_pattern_parse(nxt_mp_t *mp,
         }
 
         if (cidr_prefix == 0) {
-            base->match_type = NXT_HTTP_ROUTE_ADDR_ANY;
+            base->match_type = NXT_HTTP_ADDR_ANY;
 
             goto parse_port;
         }
 
         if (cidr_prefix < 32) {
-            base->match_type = NXT_HTTP_ROUTE_ADDR_CIDR;
+            base->match_type = NXT_HTTP_ADDR_CIDR;
 
             goto parse_port;
         }
@@ -258,7 +269,7 @@ nxt_http_route_addr_pattern_parse(nxt_mp_t *mp,
         return NXT_ADDR_PATTERN_FORMAT_ERROR;
     }
 
-    base->match_type = NXT_HTTP_ROUTE_ADDR_EXACT;
+    base->match_type = NXT_HTTP_ADDR_EXACT;
 
 parse_port:
 
@@ -334,3 +345,201 @@ nxt_valid_ipv6_blocks(u_char *c, size_t len)
 }
 
 #endif
+
+
+nxt_http_addr_rule_t *
+nxt_http_addr_rule_create(nxt_mp_t *mp, nxt_conf_value_t *cv)
+{
+    size_t                   size;
+    uint32_t                 i, n;
+    nxt_bool_t               array;
+    nxt_conf_value_t         *value;
+    nxt_http_addr_rule_t     *rule;
+    nxt_http_addr_pattern_t  *pattern;
+
+    array = (nxt_conf_type(cv) == NXT_CONF_ARRAY);
+    n = array ? nxt_conf_array_elements_count(cv) : 1;
+    size = sizeof(nxt_http_addr_rule_t) + n * sizeof(nxt_http_addr_pattern_t);
+
+    rule = nxt_mp_alloc(mp, size);
+    if (nxt_slow_path(rule == NULL)) {
+        return NULL;
+    }
+
+    rule->items = n;
+
+    for (i = 0; i < n; i++) {
+        pattern = &rule->pattern[i];
+        value = array ? nxt_conf_get_array_element(cv, i) : cv;
+
+        if (nxt_http_addr_pattern_parse(mp, pattern, value) != NXT_OK) {
+            return NULL;
+        }
+    }
+
+    if (n > 1) {
+        nxt_qsort(rule->pattern, n, sizeof(nxt_http_addr_pattern_t),
+                  nxt_http_addr_pattern_compare);
+    }
+
+    return rule;
+}
+
+
+static int
+nxt_http_addr_pattern_compare(const void *one, const void *two)
+{
+    const nxt_http_addr_pattern_t  *p1, *p2;
+
+    p1 = one;
+    p2 = two;
+
+    return (p2->base.negative - p1->base.negative);
+}
+
+
+static nxt_bool_t
+nxt_http_addr_pattern_match(nxt_http_addr_pattern_t *p, nxt_sockaddr_t *sa)
+{
+#if (NXT_INET6)
+    uint32_t              i;
+#endif
+    in_port_t             in_port;
+    nxt_bool_t            match;
+    struct sockaddr_in    *sin;
+#if (NXT_INET6)
+    struct sockaddr_in6   *sin6;
+#endif
+    nxt_http_addr_base_t  *base;
+
+    base = &p->base;
+
+    switch (sa->u.sockaddr.sa_family) {
+
+    case AF_INET:
+        match = (base->addr_family == AF_INET
+                 || base->addr_family == AF_UNSPEC);
+        if (!match) {
+            break;
+        }
+
+        sin = &sa->u.sockaddr_in;
+        in_port = ntohs(sin->sin_port);
+
+        match = (in_port >= base->port.start && in_port <= base->port.end);
+        if (!match) {
+            break;
+        }
+
+        switch (base->match_type) {
+
+        case NXT_HTTP_ADDR_ANY:
+            break;
+
+        case NXT_HTTP_ADDR_EXACT:
+            match = (nxt_memcmp(&sin->sin_addr, &p->addr.v4.start,
+                                sizeof(struct in_addr)) == 0);
+            break;
+
+        case NXT_HTTP_ADDR_RANGE:
+            match = (nxt_memcmp(&sin->sin_addr, &p->addr.v4.start,
+                                sizeof(struct in_addr)) >= 0
+                     && nxt_memcmp(&sin->sin_addr, &p->addr.v4.end,
+                                   sizeof(struct in_addr)) <= 0);
+            break;
+
+        case NXT_HTTP_ADDR_CIDR:
+            match = ((sin->sin_addr.s_addr & p->addr.v4.end)
+                     == p->addr.v4.start);
+            break;
+
+        default:
+            nxt_unreachable();
+        }
+
+        break;
+
+#if (NXT_INET6)
+    case AF_INET6:
+        match = (base->addr_family == AF_INET6
+                 || base->addr_family == AF_UNSPEC);
+        if (!match) {
+            break;
+        }
+
+        sin6 = &sa->u.sockaddr_in6;
+        in_port = ntohs(sin6->sin6_port);
+
+        match = (in_port >= base->port.start && in_port <= base->port.end);
+        if (!match) {
+            break;
+        }
+
+        switch (base->match_type) {
+
+        case NXT_HTTP_ADDR_ANY:
+            break;
+
+        case NXT_HTTP_ADDR_EXACT:
+            match = (nxt_memcmp(&sin6->sin6_addr, &p->addr.v6.start,
+                                sizeof(struct in6_addr)) == 0);
+            break;
+
+        case NXT_HTTP_ADDR_RANGE:
+            match = (nxt_memcmp(&sin6->sin6_addr, &p->addr.v6.start,
+                                sizeof(struct in6_addr)) >= 0
+                     && nxt_memcmp(&sin6->sin6_addr, &p->addr.v6.end,
+                                   sizeof(struct in6_addr)) <= 0);
+            break;
+
+        case NXT_HTTP_ADDR_CIDR:
+            for (i = 0; i < 16; i++) {
+                match = ((sin6->sin6_addr.s6_addr[i]
+                          & p->addr.v6.end.s6_addr[i])
+                         == p->addr.v6.start.s6_addr[i]);
+                if (!match) {
+                    break;
+                }
+            }
+
+            break;
+
+        default:
+            nxt_unreachable();
+        }
+
+        break;
+#endif
+
+    default:
+        match = 0;
+        break;
+    }
+
+    return match ^ base->negative;
+}
+
+
+nxt_bool_t
+nxt_http_addr_rule_match(nxt_http_addr_rule_t *rule, nxt_sockaddr_t *sa)
+{
+    uint32_t                 i;
+    nxt_bool_t               matches;
+    nxt_http_addr_pattern_t  *p;
+
+    for (i = 0; i < rule->items; i++) {
+        p = &rule->pattern[i];
+        matches = nxt_http_addr_pattern_match(p, sa);
+
+        if (p->base.negative) {
+            if (!matches) {
+                return 0;
+            }
+
+        } else if (matches) {
+            return 1;
+        }
+    }
+
+    return (rule->items != 0 && rule->pattern[rule->items - 1].base.negative);
+}

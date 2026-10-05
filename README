@@ -6,6 +6,9 @@ AppServe is a dynamically configurable application server for UNIX-like
 systems.  It runs applications in multiple languages and exposes a control
 API for configuration at runtime.
 
+Listeners pass requests directly to applications and application targets.
+Listener pass values can use request variables and NJS expressions.
+
 AppServe continues the development and maintenance of NGINX Unit.
 
 Source code and issue tracking:

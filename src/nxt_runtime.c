@@ -10,7 +10,6 @@
 #include <nxt_port.h>
 #include <nxt_main_process.h>
 #include <nxt_router.h>
-#include <nxt_regex.h>
 
 
 static nxt_int_t nxt_runtime_inherited_listen_sockets(nxt_task_t *task,

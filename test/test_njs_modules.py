@@ -1,9 +1,9 @@
-from unit.applications.proto import ApplicationProto
+from unit.applications.lang.python import ApplicationPython
 from unit.option import option
 
-prerequisites = {'modules': {'njs': 'any'}}
+prerequisites = {'modules': {'njs': 'any', 'python': 'any'}}
 
-client = ApplicationProto()
+client = ApplicationPython()
 
 
 def njs_script_load(module, name=None, expect='success'):
@@ -15,20 +15,15 @@ def njs_script_load(module, name=None, expect='success'):
 
 
 def test_njs_modules():
+    client.load('empty', name='next')
     njs_script_load('next')
 
     assert 'export' in client.conf_get('/js_modules/next')
     assert 'error' in client.conf_post('"blah"', '/js_modules/next')
 
+    assert 'success' in client.conf({'js_module': 'next'}, 'settings')
     assert 'success' in client.conf(
-        {
-            "settings": {"js_module": "next"},
-            "listeners": {"*:8080": {"pass": "routes/first"}},
-            "routes": {
-                "first": [{"action": {"pass": "`routes/${next.route()}`"}}],
-                "next": [{"action": {"return": 200}}],
-            },
-        }
+        {'pass': '`applications/${next.route()}`'}, 'listeners/*:8080'
     )
     assert client.get()['status'] == 200, 'string'
 
@@ -47,7 +42,7 @@ def test_njs_modules():
     assert client.get()['status'] == 200, 'array len 2'
 
     assert 'success' in client.conf(
-        '"`routes/${next_2.route()}`"', 'routes/first/0/action/pass'
+        '"`applications/${next_2.route()}`"', 'listeners/*:8080/pass'
     )
     assert client.get()['status'] == 200, 'array new'
 
@@ -63,37 +58,23 @@ def test_njs_modules():
 
 
 def test_njs_modules_import():
+    client.load('empty', name='number')
     njs_script_load('import_from')
 
+    assert 'success' in client.conf({'js_module': 'import_from'}, 'settings')
     assert 'success' in client.conf(
-        {
-            "settings": {"js_module": "import_from"},
-            "listeners": {"*:8080": {"pass": "routes/first"}},
-            "routes": {
-                "first": [
-                    {"action": {"pass": "`routes/${import_from.num()}`"}}
-                ],
-                "number": [{"action": {"return": 200}}],
-            },
-        }
+        {'pass': '`applications/${import_from.num()}`'}, 'listeners/*:8080'
     )
     assert client.get()['status'] == 200
 
 
 def test_njs_modules_this():
+    client.load('empty', name='string')
     njs_script_load('global_this')
 
+    assert 'success' in client.conf({'js_module': 'global_this'}, 'settings')
     assert 'success' in client.conf(
-        {
-            "settings": {"js_module": "global_this"},
-            "listeners": {"*:8080": {"pass": "routes/first"}},
-            "routes": {
-                "first": [
-                    {"action": {"pass": "`routes/${global_this.str()}`"}}
-                ],
-                "string": [{"action": {"return": 200}}],
-            },
-        }
+        {'pass': '`applications/${global_this.str()}`'}, 'listeners/*:8080'
     )
     assert client.get()['status'] == 200
 

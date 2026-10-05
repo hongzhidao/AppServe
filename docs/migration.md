@@ -75,24 +75,30 @@ version-qualified types, must be removed from the configuration before upgrading
 
 ## Routing compatibility
 
-The route action's `rewrite` option is removed starting with AppServe 0.2.0.
-Remove it from route actions and nested fallback actions before upgrading.
-Configurations containing this option are rejected as having an unknown
-parameter. Requests keep their original target throughout routing.
+Built-in request routing is removed starting with AppServe 0.2.0. Remove the
+top-level `routes` configuration, including empty arrays and objects, before
+upgrading. Listener `pass` values targeting `routes` or `routes/...` are no
+longer supported. Route matching, route chains, and route actions, including
+`return`, `location`, `rewrite`, and `response_headers`, are removed. Move
+request matching, redirects, and custom responses to the application or
+front-end proxy.
 
-The route action's `response_headers` option is also removed starting with
-AppServe 0.2.0. Remove it from route actions and nested fallback actions before
-upgrading. Configurations containing this option, including an empty object,
-are rejected as having an unknown parameter. Configure custom response headers
-in the application or front-end proxy instead.
+Listeners pass requests directly to `applications/<name>` or
+`applications/<name>/<target>`. Request variables and NJS expressions remain
+available in listener `pass` values, including dynamic application and target
+selection. Unknown dynamic destinations return HTTP 404. The legacy listener
+`application` setting also remains supported.
+
+The routing-specific PCRE/PCRE2 dependency and the `--no-regex` and
+`--no-pcre2` configure options are removed. JavaScript regular expressions in
+NJS expressions remain available.
 
 ## Static file serving
 
 Built-in static file serving is removed starting with AppServe 0.2.0. Migrate
 routes using the `share` action to an application or front-end proxy before
 upgrading. The `share` action and its `types`, `chroot`, `follow_symlinks`,
-`traverse_mounts`, and `fallback` options are no longer supported. Route actions
-now support `pass` or `return`.
+`traverse_mounts`, and `fallback` options are no longer supported.
 
 Remove `settings/http/static`, including its `mime_types` configuration, before
 upgrading. Configurations containing these removed settings are rejected,
@@ -106,8 +112,7 @@ Built-in reverse proxying and upstream load balancing are removed starting
 with AppServe 0.2.0. Migrate route actions using `proxy` and listener or route
 `pass` values targeting `upstreams/...` to a front-end proxy before upgrading.
 Remove the top-level `upstreams` object, including an empty object, from the
-configuration. These configurations are rejected; route actions now support
-only `pass` to applications or routes and `return`.
+configuration. These configurations are rejected.
 
 ## TLS compatibility
 
@@ -120,8 +125,7 @@ PEM bundles from `/docker-entrypoint.d/`.
 
 Applications can still receive the original HTTPS scheme through a listener's
 `forwarded.protocol` setting. Configure its `source` to match the front-end
-proxy. Scheme-based routing and application scheme metadata continue to use
-this forwarded value.
+proxy. Application scheme metadata continues to use this forwarded value.
 
 ## Access logging
 
@@ -133,7 +137,7 @@ parameter. Record HTTP access logs in the application or front-end proxy.
 
 The access-log response variables `$status`, `$body_bytes_sent`, and
 `$response_header_*` are also removed. Request variables remain available in
-route conditions and dynamic `pass` values.
+dynamic listener `pass` values.
 
 Daemon and application diagnostic output still uses `appserve.log`, and
 `SIGUSR1` continues to reopen that log for rotation.

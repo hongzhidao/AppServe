@@ -3,6 +3,7 @@ import socket
 
 import pytest
 from unit.control import Control
+from unit.option import option
 
 prerequisites = {'modules': {'python': 'any'}}
 
@@ -13,9 +14,15 @@ client = Control()
 def try_addr(addr):
     return client.conf(
         {
-            "listeners": {addr: {"pass": "routes"}},
-            "routes": [{"action": {"return": 200}}],
-            "applications": {},
+            "listeners": {addr: {"pass": "applications/empty"}},
+            "applications": {
+                "empty": {
+                    "type": "python",
+                    "processes": {"spare": 0},
+                    "path": option.test_dir + '/python/empty',
+                    "module": "wsgi",
+                }
+            },
         }
     )
 
@@ -305,7 +312,7 @@ def test_listeners_tls_unsupported(tls):
     before = client.conf_get()
 
     result = client.conf(
-        {'*:8080': {'pass': 'routes', 'tls': tls}}, 'listeners'
+        {'*:8080': {'pass': 'applications/empty', 'tls': tls}}, 'listeners'
     )
 
     assert 'error' in result, 'unsupported TLS listener'
@@ -353,12 +360,7 @@ def test_listeners_port_release():
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-            client.conf(
-                {
-                    "listeners": {"127.0.0.1:8080": {"pass": "routes"}},
-                    "routes": [],
-                }
-            )
+            assert 'success' in try_addr('127.0.0.1:8080')
 
             resp = client.conf({"listeners": {}, "applications": {}})
 

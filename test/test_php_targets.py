@@ -10,18 +10,7 @@ client = ApplicationPHP()
 def test_php_application_targets():
     assert 'success' in client.conf(
         {
-            "listeners": {"*:8080": {"pass": "routes"}},
-            "routes": [
-                {
-                    "match": {"uri": "/1"},
-                    "action": {"pass": "applications/targets/1"},
-                },
-                {
-                    "match": {"uri": "/2"},
-                    "action": {"pass": "applications/targets/2"},
-                },
-                {"action": {"pass": "applications/targets/default"}},
-            ],
+            "listeners": {"*:8080": {"pass": "applications/targets/1"}},
             "applications": {
                 "targets": {
                     "type": "php",
@@ -46,7 +35,13 @@ def test_php_application_targets():
     )
 
     assert client.get(url='/1')['body'] == '1'
+    assert 'success' in client.conf(
+        {'pass': 'applications/targets/2'}, 'listeners/*:8080'
+    )
     assert client.get(url='/2')['body'] == '2'
+    assert 'success' in client.conf(
+        {'pass': 'applications/targets/default'}, 'listeners/*:8080'
+    )
     assert client.get(url='/blah')['status'] == 503  # TODO 404
     assert client.get(url='/')['body'] == 'index'
     assert client.get(url='/1.php?test=test.php/')['body'] == '1'

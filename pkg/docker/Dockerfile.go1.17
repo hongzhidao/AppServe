@@ -4,7 +4,7 @@ COPY appserve-0.1.0.tar.gz /usr/src/appserve.tar.gz
 
 RUN set -ex \
     && apt-get update \
-    && apt-get install --no-install-recommends --no-install-suggests -y ca-certificates build-essential libpcre2-dev \
+    && apt-get install --no-install-recommends --no-install-suggests -y ca-certificates build-essential \
     && mkdir -p /usr/lib/appserve/modules /usr/lib/appserve/debug-modules /usr/src/appserve \
     && tar -xzf /usr/src/appserve.tar.gz -C /usr/src/appserve \
     && cd /usr/src/appserve \

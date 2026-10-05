@@ -87,9 +87,8 @@ NXT_LIB_SRCS=" \
     src/nxt_http_request.c \
     src/nxt_http_response.c \
     src/nxt_http_error.c \
-    src/nxt_http_route.c \
-    src/nxt_http_route_addr.c \
-    src/nxt_http_return.c \
+    src/nxt_http_pass.c \
+    src/nxt_http_addr.c \
     src/nxt_http_variables.c \
     src/nxt_application.c \
     src/nxt_external.c \
@@ -111,9 +110,6 @@ NXT_LIB_SRC0=" \
 
 NXT_LIB_UNIT_SRCS="src/nxt_unit.c"
 
-
-NXT_LIB_PCRE_SRCS="src/nxt_pcre.c"
-NXT_LIB_PCRE2_SRCS="src/nxt_pcre2.c"
 
 if [ "$NXT_NJS" != "NO" ]; then
     NXT_LIB_SRCS="$NXT_LIB_SRCS src/nxt_js.c src/nxt_http_js.c src/nxt_script.c"
@@ -176,14 +172,6 @@ if [ $NXT_HAVE_ROOTFS = YES ]; then
     NXT_LIB_SRCS="$NXT_LIB_SRCS src/nxt_fs.c"
 fi
 
-
-if [ "$NXT_REGEX" = "YES" ]; then
-    if [ "$NXT_HAVE_PCRE2" = "YES" ]; then
-        NXT_LIB_SRCS="$NXT_LIB_SRCS $NXT_LIB_PCRE2_SRCS"
-    else
-        NXT_LIB_SRCS="$NXT_LIB_SRCS $NXT_LIB_PCRE_SRCS"
-    fi
-fi
 
 if [ "$NXT_HAVE_EPOLL" = "YES" -o "$NXT_TEST_BUILD_EPOLL" = "YES" ]; then
     NXT_LIB_SRCS="$NXT_LIB_SRCS $NXT_LIB_EPOLL_SRCS"

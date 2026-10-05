@@ -16,12 +16,9 @@ typedef struct nxt_http_request_s  nxt_http_request_t;
 #include <nxt_application.h>
 
 
-typedef struct nxt_http_action_s               nxt_http_action_t;
-typedef struct nxt_http_routes_s               nxt_http_routes_t;
-typedef struct nxt_http_forward_s              nxt_http_forward_t;
-
-
-#define NXT_HTTP_ACTION_ERROR  ((nxt_http_action_t *) -1)
+typedef struct nxt_http_pass_s       nxt_http_pass_t;
+typedef struct nxt_http_forward_s    nxt_http_forward_t;
+typedef struct nxt_http_addr_rule_s  nxt_http_addr_rule_t;
 
 
 typedef struct {
@@ -41,7 +38,6 @@ typedef struct {
     nxt_tstr_state_t                *tstr_state;
 
     nxt_router_t                    *router;
-    nxt_http_routes_t               *routes;
 
     nxt_lvlhsh_t                    apps_hash;
 } nxt_router_conf_t;
@@ -124,6 +120,7 @@ struct nxt_app_s {
     nxt_msec_t             idle_timeout;
 
     nxt_str_t              *targets;
+    uint32_t               targets_count;
 
     nxt_app_type_t         type:8;
 
@@ -155,7 +152,7 @@ typedef struct {
     nxt_queue_link_t       link;
     nxt_router_conf_t      *router_conf;
 
-    nxt_http_action_t      *action;
+    nxt_http_pass_t        *pass;
 
     /*
      * A listen socket time can be shorter than socket configuration life
@@ -202,10 +199,10 @@ typedef struct {
 
 
 void nxt_router_process_http_request(nxt_task_t *task, nxt_http_request_t *r,
-    nxt_http_action_t *action);
+    nxt_http_pass_t *pass);
 void nxt_router_app_port_close(nxt_task_t *task, nxt_port_t *port);
 nxt_int_t nxt_router_application_init(nxt_router_conf_t *rtcf, nxt_str_t *name,
-    nxt_str_t *target, nxt_http_action_t *action);
+    nxt_str_t *target, nxt_http_pass_t *pass);
 void nxt_router_listen_event_release(nxt_task_t *task, nxt_listen_event_t *lev,
     nxt_socket_conf_joint_t *joint);
 

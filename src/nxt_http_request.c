@@ -6,6 +6,7 @@
 
 #include <nxt_router.h>
 #include <nxt_http.h>
+#include <nxt_http_addr.h>
 
 
 static nxt_int_t nxt_http_validate_host(nxt_str_t *host, nxt_mp_t *mp);
@@ -347,7 +348,7 @@ nxt_http_request_forward(nxt_task_t *task, nxt_http_request_t *r,
     nxt_http_field_t           *f, **fields, *protocol_field;
     nxt_http_forward_header_t  *client_ip, *protocol;
 
-    ret = nxt_http_route_addr_rule(r, forward->source, r->remote);
+    ret = nxt_http_addr_rule_match(forward->source, r->remote);
     if (ret <= 0) {
         return NXT_OK;
     }
@@ -454,7 +455,7 @@ nxt_http_request_forward_client_ip(nxt_http_request_t *r,
                 return;
             }
 
-            ret = nxt_http_route_addr_rule(r, forward->source, sa);
+            ret = nxt_http_addr_rule_match(forward->source, sa);
             if (ret <= 0 || (i == 0 && p == start)) {
                 r->remote = sa;
                 return;
@@ -541,43 +542,19 @@ static const nxt_http_request_state_t  nxt_http_request_body_state
 static void
 nxt_http_request_ready(nxt_task_t *task, void *obj, void *data)
 {
-    nxt_http_action_t   *action;
+    nxt_http_pass_t     *pass;
     nxt_http_request_t  *r;
 
     r = obj;
-    action = r->conf->socket_conf->action;
+    pass = r->conf->socket_conf->pass;
 
-    nxt_http_request_action(task, r, action);
+    pass->handler(task, r, pass);
 }
 
 
 void
-nxt_http_request_action(nxt_task_t *task, nxt_http_request_t *r,
-    nxt_http_action_t *action)
-{
-    if (nxt_fast_path(action != NULL)) {
-
-        do {
-            action = action->handler(task, r, action);
-
-            if (action == NULL) {
-                return;
-            }
-
-            if (action == NXT_HTTP_ACTION_ERROR) {
-                break;
-            }
-
-        } while (r->pass_count++ < 255);
-    }
-
-    nxt_http_request_error(task, r, NXT_HTTP_INTERNAL_SERVER_ERROR);
-}
-
-
-nxt_http_action_t *
 nxt_http_application_handler(nxt_task_t *task, nxt_http_request_t *r,
-    nxt_http_action_t *action)
+    nxt_http_pass_t *pass)
 {
     nxt_debug(task, "http application handler");
 
@@ -594,9 +571,7 @@ nxt_http_application_handler(nxt_task_t *task, nxt_http_request_t *r,
         nxt_str_set(&r->server_name, "localhost");
     }
 
-    nxt_router_process_http_request(task, r, action);
-
-    return NULL;
+    nxt_router_process_http_request(task, r, pass);
 }
 
 
@@ -1235,49 +1210,4 @@ int64_t
 nxt_http_cookie_hash(nxt_mp_t *mp, nxt_str_t *name)
 {
     return nxt_http_field_hash(mp, name, 1, NXT_HTTP_URI_ENCODING_NONE);
-}
-
-
-int
-nxt_http_cond_value(nxt_task_t *task, nxt_http_request_t *r,
-    nxt_tstr_cond_t *cond)
-{
-    nxt_int_t          ret;
-    nxt_str_t          str;
-    nxt_bool_t         expr;
-    nxt_router_conf_t  *rtcf;
-
-    rtcf = r->conf->socket_conf->router_conf;
-
-    expr = 1;
-
-    if (cond->expr != NULL) {
-
-        if (nxt_tstr_is_const(cond->expr)) {
-            nxt_tstr_str(cond->expr, &str);
-
-        } else {
-            ret = nxt_tstr_query_init(&r->tstr_query, rtcf->tstr_state,
-                                      &r->tstr_cache, r, r->mem_pool);
-            if (nxt_slow_path(ret != NXT_OK)) {
-                return -1;
-            }
-
-            ret = nxt_tstr_query(task, r->tstr_query, cond->expr, &str);
-            if (nxt_slow_path(ret != NXT_OK)) {
-                return -1;
-            }
-        }
-
-        if (str.length == 0
-            || nxt_str_eq(&str, "0", 1)
-            || nxt_str_eq(&str, "false", 5)
-            || nxt_str_eq(&str, "null", 4)
-            || nxt_str_eq(&str, "undefined", 9))
-        {
-            expr = 0;
-        }
-    }
-
-    return cond->negate ^ expr;
 }

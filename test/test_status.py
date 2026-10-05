@@ -36,11 +36,10 @@ def test_status_requests(skip_alert):
     assert 'success' in client.conf(
         {
             "listeners": {
-                "*:8080": {"pass": "routes"},
+                "*:8080": {"pass": "applications/empty"},
                 "*:8081": {"pass": "applications/empty"},
                 "*:8082": {"pass": "applications/blah"},
             },
-            "routes": [{"action": {"return": 200}}],
             "applications": {
                 "empty": app_default(),
                 "blah": {
@@ -94,11 +93,11 @@ def test_status_connections():
     assert 'success' in client.conf(
         {
             "listeners": {
-                "*:8080": {"pass": "routes"},
+                "*:8080": {"pass": "applications/empty"},
                 "*:8081": {"pass": "applications/delayed"},
             },
-            "routes": [{"action": {"return": 200}}],
             "applications": {
+                "empty": app_default(),
                 "delayed": app_default("delayed"),
             },
         },
@@ -192,7 +191,6 @@ def test_status_applications():
                 "*:8080": {"pass": "applications/restart"},
                 "*:8081": {"pass": "applications/delayed"},
             },
-            "routes": [],
             "applications": {
                 "restart": app_default("restart", "longstart"),
                 "delayed": app_default("delayed"),
@@ -210,19 +208,13 @@ def test_status_applications():
     check_application('restart', 0, 1, 0, 1)
     check_application('delayed', 0, 0, 0, 0)
 
-def test_status_route_application():
+def test_status_dynamic_application():
     assert 'success' in client.conf(
         {
             "listeners": {
-                "*:8080": {"pass": "routes"},
+                "*:8080": {"pass": "applications/$arg_app"},
                 "*:8081": {"pass": "applications/empty"},
             },
-            "routes": [
-                {
-                    "match": {"uri": "/"},
-                    "action": {"pass": "applications/empty"},
-                }
-            ],
             "applications": {
                 "empty": app_default(),
             },
@@ -231,6 +223,9 @@ def test_status_route_application():
 
     Status.init()
 
-    assert client.get()['status'] == 200
+    assert client.get(url='/?app=empty')['status'] == 200
     check_connections(1, 0, 0, 1)
-    assert Status.get('/requests/total') == 1, 'route application'
+    assert Status.get('/requests/total') == 1, 'dynamic application'
+    assert client.get(url='/?app=missing')['status'] == 404
+    check_connections(2, 0, 0, 2)
+    assert Status.get('/requests/total') == 2, 'missing dynamic application'
