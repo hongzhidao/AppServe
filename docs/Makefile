@@ -12,10 +12,7 @@ PACKAGES=	appserve 						\
 		appserve-go appserve-go1.7 appserve-go1.8 appserve-go1.9	\
 		appserve-go1.10 appserve-go1.12 appserve-go1.13		\
 		appserve-perl						\
-		appserve-ruby						\
-		appserve-jsc-common appserve-jsc8 appserve-jsc10		\
-		appserve-jsc11 appserve-jsc13 appserve-jsc14		\
-		appserve-jsc15 appserve-jsc16 appserve-jsc17 appserve-jsc18
+		appserve-ruby
 
 CURDATE:=$(shell date +"%Y-%m-%d")
 CURTIME:=$(shell date +"%H:%M:%S %z")

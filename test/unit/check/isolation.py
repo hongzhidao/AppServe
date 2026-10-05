@@ -2,7 +2,6 @@ import json
 import os
 
 from unit.applications.lang.go import ApplicationGo
-from unit.applications.lang.java import ApplicationJava
 from unit.applications.lang.node import ApplicationNode
 from unit.applications.lang.ruby import ApplicationRuby
 from unit.http import HTTP1
@@ -74,23 +73,6 @@ def check_isolation():
                     "processes": {"spare": 0},
                     "working_directory": option.temp_dir + "/ruby/empty",
                     "script": option.temp_dir + "/ruby/empty/config.ru",
-                    "isolation": {"namespaces": {"credential": True}},
-                }
-            },
-        }
-
-    elif 'java' in available['modules']:
-        ApplicationJava().prepare_env('empty')
-
-        conf = {
-            "listeners": {"*:8080": {"pass": "applications/empty"}},
-            "applications": {
-                "empty": {
-                    "unit_jars": option.current_dir + "/build",
-                    "type": "java",
-                    "processes": {"spare": 0},
-                    "working_directory": option.test_dir + "/java/empty/",
-                    "webapp": option.temp_dir + "/java",
                     "isolation": {"namespaces": {"credential": True}},
                 }
             },

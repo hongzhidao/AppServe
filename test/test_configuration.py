@@ -154,6 +154,25 @@ def test_applications_type_only():
         {"app": {"type": "python"}}, 'applications'
     ), 'type only'
 
+@pytest.mark.parametrize('application_type', ['java', 'java 11'])
+def test_applications_unsupported_java(application_type):
+    before = client.conf_get()
+
+    result = client.conf(
+        {
+            "app": {
+                "type": application_type,
+                "processes": {"spare": 0},
+                "webapp": "/app",
+            }
+        },
+        'applications',
+    )
+
+    assert 'error' in result, 'unsupported Java application'
+    assert 'not found' in result['detail'], 'unavailable application module'
+    assert client.conf_get() == before, 'configuration unchanged'
+
 def test_applications_miss_quote():
     assert 'error' in client.conf(
         """
