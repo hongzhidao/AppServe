@@ -72,6 +72,49 @@ def test_routes_rewrite_unsupported(action):
     assert client.conf_get() == before, 'configuration unchanged'
     assert client.get()['status'] == 200, 'original route still works'
 
+@pytest.mark.parametrize(
+    'action',
+    [
+        {'pass': 'routes', 'response_headers': {'X-Foo': 'foo'}},
+        {'return': 200, 'response_headers': {'X-Foo': 'foo'}},
+        {'share': '/app', 'response_headers': {'X-Foo': 'foo'}},
+        {
+            'proxy': 'http://127.0.0.1:8081',
+            'response_headers': {'X-Foo': 'foo'},
+        },
+        {
+            'share': '/app',
+            'fallback': {
+                'return': 200,
+                'response_headers': {'X-Foo': 'foo'},
+            },
+        },
+    ],
+)
+def test_routes_response_headers_unsupported(action):
+    before = client.conf_get()
+
+    result = route({'action': action})
+
+    assert 'error' in result, 'unsupported response_headers action'
+    assert result['detail'] == 'Unknown parameter "response_headers".'
+    assert client.conf_get() == before, 'configuration unchanged'
+    assert client.get()['status'] == 200, 'original route still works'
+
+@pytest.mark.parametrize(
+    'headers',
+    [{}, {'X-Foo': 'foo'}, {'X-Foo': '$uri'}, {'ETag': None}],
+)
+def test_routes_response_headers_update_unsupported(headers):
+    before = client.conf_get()
+
+    result = client.conf(headers, 'routes/0/action/response_headers')
+
+    assert 'error' in result, 'unsupported response_headers update'
+    assert result['detail'] == 'Unknown parameter "response_headers".'
+    assert client.conf_get() == before, 'configuration unchanged'
+    assert client.get()['status'] == 200, 'original route still works'
+
 def test_routes_match_method_positive():
     assert client.get()['status'] == 200, 'GET'
     assert client.post()['status'] == 404, 'POST'

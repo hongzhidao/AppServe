@@ -166,8 +166,6 @@ static nxt_int_t nxt_conf_vldt_match_addrs(nxt_conf_validation_t *vldt,
     nxt_conf_value_t *value, void *data);
 static nxt_int_t nxt_conf_vldt_match_addr(nxt_conf_validation_t *vldt,
     nxt_conf_value_t *value);
-static nxt_int_t nxt_conf_vldt_response_header(nxt_conf_validation_t *vldt,
-    nxt_str_t *name, nxt_conf_value_t *value);
 static nxt_int_t nxt_conf_vldt_app_name(nxt_conf_validation_t *vldt,
     nxt_conf_value_t *value, void *data);
 static nxt_int_t nxt_conf_vldt_forwarded(nxt_conf_validation_t *vldt,
@@ -668,18 +666,6 @@ static nxt_conf_vldt_object_t  nxt_conf_vldt_match_members[] = {
 };
 
 
-static nxt_conf_vldt_object_t  nxt_conf_vldt_action_common_members[] = {
-    {
-        .name       = nxt_string("response_headers"),
-        .type       = NXT_CONF_VLDT_OBJECT,
-        .validator  = nxt_conf_vldt_object_iterator,
-        .u.object   = nxt_conf_vldt_response_header,
-    },
-
-    NXT_CONF_VLDT_END
-};
-
-
 static nxt_conf_vldt_object_t  nxt_conf_vldt_pass_action_members[] = {
     {
         .name       = nxt_string("pass"),
@@ -688,7 +674,7 @@ static nxt_conf_vldt_object_t  nxt_conf_vldt_pass_action_members[] = {
         .flags      = NXT_CONF_VLDT_TSTR,
     },
 
-    NXT_CONF_VLDT_NEXT(nxt_conf_vldt_action_common_members)
+    NXT_CONF_VLDT_END
 };
 
 
@@ -702,7 +688,7 @@ static nxt_conf_vldt_object_t  nxt_conf_vldt_return_action_members[] = {
         .type       = NXT_CONF_VLDT_STRING,
     },
 
-    NXT_CONF_VLDT_NEXT(nxt_conf_vldt_action_common_members)
+    NXT_CONF_VLDT_END
 };
 
 
@@ -743,7 +729,7 @@ static nxt_conf_vldt_object_t  nxt_conf_vldt_share_action_members[] = {
 #endif
     },
 
-    NXT_CONF_VLDT_NEXT(nxt_conf_vldt_action_common_members)
+    NXT_CONF_VLDT_END
 };
 
 
@@ -754,7 +740,7 @@ static nxt_conf_vldt_object_t  nxt_conf_vldt_proxy_action_members[] = {
         .validator  = nxt_conf_vldt_proxy,
     },
 
-    NXT_CONF_VLDT_NEXT(nxt_conf_vldt_action_common_members)
+    NXT_CONF_VLDT_END
 };
 
 
@@ -2348,46 +2334,6 @@ nxt_conf_vldt_object_conf_commands(nxt_conf_validation_t *vldt,
 #endif
 
 #endif
-
-
-static nxt_int_t
-nxt_conf_vldt_response_header(nxt_conf_validation_t *vldt, nxt_str_t *name,
-    nxt_conf_value_t *value)
-{
-    nxt_str_t   str;
-    nxt_uint_t  type;
-
-    static nxt_str_t  content_length = nxt_string("Content-Length");
-
-    if (name->length == 0) {
-        return nxt_conf_vldt_error(vldt, "The response header name "
-                                         "must not be empty.");
-    }
-
-    if (nxt_strstr_eq(name, &content_length)) {
-        return nxt_conf_vldt_error(vldt, "The \"Content-Length\" response "
-                                         "header value is not supported");
-    }
-
-    type = nxt_conf_type(value);
-
-    if (type == NXT_CONF_NULL) {
-        return NXT_OK;
-    }
-
-    if (type == NXT_CONF_STRING) {
-        nxt_conf_get_string(value, &str);
-
-        if (nxt_is_tstr(&str)) {
-            return nxt_conf_vldt_var(vldt, name, &str);
-        }
-
-        return NXT_OK;
-    }
-
-    return nxt_conf_vldt_error(vldt, "The \"%V\" response header value "
-                               "must either be a string or a null", name);
-}
 
 
 static nxt_int_t

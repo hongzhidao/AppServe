@@ -80,6 +80,12 @@ Remove it from route actions and nested fallback actions before upgrading.
 Configurations containing this option are rejected as having an unknown
 parameter. Requests keep their original target throughout routing and proxying.
 
+The route action's `response_headers` option is also removed starting with
+AppServe 0.2.0. Remove it from route actions and nested fallback actions before
+upgrading. Configurations containing this option, including an empty object,
+are rejected as having an unknown parameter. Configure custom response headers
+in the application or front-end proxy instead.
+
 ## Containers
 
 Generate Dockerfiles with `make -C pkg/docker dockerfiles` and build images with
