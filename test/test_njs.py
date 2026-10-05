@@ -92,22 +92,15 @@ def test_njs_variables():
     assert client.get()['status'] == 200, 'undefined 2'
 
 
-def test_njs_variables_cacheable_access_log(findall, temp_dir):
-    assert 'success' in client.conf({"return": 200}, 'routes/entry/0/action')
+def test_njs_variables_cacheable():
+    create_routes('localhost-localhost', 'example.com-example.com')
+    set_pass('`routes/${vars.host}-${vars.host}`')
 
-    assert 'success' in client.conf(
-        {
-            'path': f'{temp_dir}/access.log',
-            'format': '`${vars.host}, ${vars.status}\n`',
-        },
-        'access_log'
-    ), 'access_log configure'
-
-    reqs = 50
-    for _ in range(reqs):
-        client.get()
-
-    assert len(findall(r'localhost, 200', 'access.log')) == reqs
+    for _ in range(25):
+        assert client.get()['status'] == 200
+        assert client.get(
+            headers={'Host': 'example.com', 'Connection': 'close'}
+        )['status'] == 200
 
 
 def test_njs_invalid(skip_alert):

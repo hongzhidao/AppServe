@@ -496,8 +496,7 @@ nxt_var_next_part(u_char *start, u_char *end, nxt_str_t *part)
 
 nxt_int_t
 nxt_var_interpreter(nxt_task_t *task, nxt_tstr_state_t *state,
-    nxt_var_cache_t *cache, nxt_var_t *var, nxt_str_t *str, void *ctx,
-    nxt_bool_t logging)
+    nxt_var_cache_t *cache, nxt_var_t *var, nxt_str_t *str, void *ctx)
 {
     u_char         *p, *src;
     size_t         length, last, next;
@@ -531,10 +530,6 @@ nxt_var_interpreter(nxt_task_t *task, nxt_tstr_state_t *state,
         *part = value;
 
         length += value->length - subs[i].length;
-
-        if (logging && value->start == NULL) {
-            length += 1;
-        }
     }
 
     p = nxt_mp_nget(cache->pool, length);
@@ -558,10 +553,6 @@ nxt_var_interpreter(nxt_task_t *task, nxt_tstr_state_t *state,
         }
 
         p = nxt_cpymem(p, part[i]->start, part[i]->length);
-
-        if (logging && part[i]->start == NULL) {
-            *p++ = '-';
-        }
 
         last = next + subs[i].length;
     }

@@ -33,8 +33,6 @@ struct nxt_h1proto_s {
     uint8_t                   websocket_cont_expected;  /* 1 bit */
     uint8_t                   websocket_closed;         /* 1 bit */
 
-    uint32_t                  header_size;
-
     nxt_http_field_t          *websocket_key;
     nxt_h1p_websocket_timer_t *websocket_timer;
 

@@ -241,18 +241,10 @@ nxt_js_add_tpl(nxt_js_conf_t *jcf, nxt_str_t *str, nxt_uint_t flags)
                                             "args, headers, cookies, vars) {"
                                             "    return ");
 
-    /*
-     * Append a newline character if newline is true.
-     * Append a terminating null character if strz is true.
-     */
-    static nxt_str_t  newline_str = nxt_string(" + '\\x0A'");
+    /* Append a terminating null character if strz is true. */
     static nxt_str_t  strz_str = nxt_string(" + '\\x00'");
 
     size = func_str.length + str->length + 1;
-
-    if (flags & NXT_TSTR_NEWLINE) {
-        size += newline_str.length;
-    }
 
     if (flags & NXT_TSTR_STRZ) {
         size += strz_str.length;
@@ -267,10 +259,6 @@ nxt_js_add_tpl(nxt_js_conf_t *jcf, nxt_str_t *str, nxt_uint_t flags)
 
     p = nxt_cpymem(p, func_str.start, func_str.length);
     p = nxt_cpymem(p, str->start, str->length);
-
-    if (flags & NXT_TSTR_NEWLINE) {
-        p = nxt_cpymem(p, newline_str.start, newline_str.length);
-    }
 
     if (flags & NXT_TSTR_STRZ) {
         p = nxt_cpymem(p, strz_str.start, strz_str.length);

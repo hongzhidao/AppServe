@@ -46,8 +46,6 @@ static void nxt_h1p_request_send(nxt_task_t *task, nxt_http_request_t *r,
     nxt_buf_t *out);
 static nxt_buf_t *nxt_h1p_chunk_create(nxt_task_t *task, nxt_http_request_t *r,
     nxt_buf_t *out);
-static nxt_off_t nxt_h1p_request_body_bytes_sent(nxt_task_t *task,
-    nxt_http_proto_t proto);
 static void nxt_h1p_request_discard(nxt_task_t *task, nxt_http_request_t *r,
     nxt_buf_t *last);
 static void nxt_h1p_conn_request_error(nxt_task_t *task, void *obj, void *data);
@@ -97,7 +95,6 @@ const nxt_http_proto_table_t  nxt_http_proto[3] = {
         .local_addr       = nxt_h1p_request_local_addr,
         .header_send      = nxt_h1p_request_header_send,
         .send             = nxt_h1p_request_send,
-        .body_bytes_sent  = nxt_h1p_request_body_bytes_sent,
         .discard          = nxt_h1p_request_discard,
         .close            = nxt_h1p_request_close,
 
@@ -1126,8 +1123,6 @@ nxt_h1p_request_header_send(nxt_task_t *task, nxt_http_request_t *r,
 
     header->mem.free = p;
 
-    h1p->header_size = nxt_buf_mem_used_size(&header->mem);
-
     c = h1p->conn;
 
     c->write = header;
@@ -1302,20 +1297,6 @@ nxt_h1p_chunk_create(nxt_task_t *task, nxt_http_request_t *r, nxt_buf_t *out)
     header->mem.free = nxt_sprintf(header->mem.free, header->mem.end,
                                    "\r\n%xO\r\n", size);
     return header;
-}
-
-
-static nxt_off_t
-nxt_h1p_request_body_bytes_sent(nxt_task_t *task, nxt_http_proto_t proto)
-{
-    nxt_off_t      sent;
-    nxt_h1proto_t  *h1p;
-
-    h1p = proto.h1;
-
-    sent = h1p->conn->sent - h1p->header_size;
-
-    return (sent > 0) ? sent : 0;
 }
 
 

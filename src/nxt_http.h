@@ -175,7 +175,6 @@ struct nxt_http_request_s {
     uint8_t                         app_target;
     nxt_http_protocol_t             protocol:8;   /* 2 bits */
     uint8_t                         tls;          /* 1 bit, forwarded scheme */
-    uint8_t                         logged;       /* 1 bit  */
     uint8_t                         header_sent;  /* 1 bit  */
     uint8_t                         error;        /* 1 bit  */
     uint8_t                         websocket_handshake;  /* 1 bit */
@@ -229,7 +228,6 @@ typedef struct {
     void (*header_send)(nxt_task_t *task, nxt_http_request_t *r,
          nxt_work_handler_t body_handler, void *data);
     void (*send)(nxt_task_t *task, nxt_http_request_t *r, nxt_buf_t *out);
-    nxt_off_t (*body_bytes_sent)(nxt_task_t *task, nxt_http_proto_t proto);
     void (*discard)(nxt_task_t *task, nxt_http_request_t *r, nxt_buf_t *last);
     void (*close)(nxt_task_t *task, nxt_http_proto_t proto,
         nxt_socket_conf_joint_t *joint);

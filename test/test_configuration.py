@@ -1,3 +1,4 @@
+import json
 import socket
 
 import pytest
@@ -45,6 +46,30 @@ def test_upstreams_unsupported(upstreams, path):
 
     assert 'error' in result, 'unsupported upstreams configuration'
     assert result['detail'] == 'Unknown parameter "upstreams".'
+    assert client.conf_get() == before, 'configuration unchanged'
+    assert client.get()['status'] == 200, 'original route still works'
+
+@pytest.mark.parametrize(
+    'access_log',
+    [
+        '/access.log',
+        {},
+        {'path': '/access.log'},
+        {'path': '/access.log', 'format': '$request_line $status'},
+        {'path': '/access.log', 'format': {'uri': '$uri', 'status': '$status'}},
+        {'path': '/access.log', 'if': '$arg_log'},
+    ],
+)
+@pytest.mark.parametrize('path', ['', 'access_log'])
+def test_access_log_unsupported(access_log, path):
+    assert 'success' in try_addr('*:8080')
+    before = client.conf_get()
+
+    conf = {**before, 'access_log': access_log} if path == '' else access_log
+    result = client.conf(json.dumps(conf), path)
+
+    assert 'error' in result, 'unsupported access_log configuration'
+    assert result['detail'] == 'Unknown parameter "access_log".'
     assert client.conf_get() == before, 'configuration unchanged'
     assert client.get()['status'] == 200, 'original route still works'
 

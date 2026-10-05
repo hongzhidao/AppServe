@@ -123,6 +123,21 @@ Applications can still receive the original HTTPS scheme through a listener's
 proxy. Scheme-based routing and application scheme metadata continue to use
 this forwarded value.
 
+## Access logging
+
+Built-in access logging is removed starting with AppServe 0.2.0. Remove the
+top-level `access_log` setting before upgrading, whether it is a path string
+or an object with `path`, `format`, or `if`. Configurations containing this
+setting, including an empty object, are rejected as having an unknown
+parameter. Record HTTP access logs in the application or front-end proxy.
+
+The access-log response variables `$status`, `$body_bytes_sent`, and
+`$response_header_*` are also removed. Request variables remain available in
+route conditions and dynamic `pass` values.
+
+Daemon and application diagnostic output still uses `appserve.log`, and
+`SIGUSR1` continues to reopen that log for rotation.
+
 ## Containers
 
 Generate Dockerfiles with `make -C pkg/docker dockerfiles` and build images with

@@ -76,17 +76,16 @@ nxt_tstr_compile(nxt_tstr_state_t *state, nxt_str_t *str,
 {
     u_char      *p;
     nxt_tstr_t  *tstr;
-    nxt_bool_t  strz, newline;
+    nxt_bool_t  strz;
 
     strz = (flags & NXT_TSTR_STRZ) != 0;
-    newline = (flags & NXT_TSTR_NEWLINE) != 0;
 
     tstr = nxt_mp_get(state->pool, sizeof(nxt_tstr_t));
     if (nxt_slow_path(tstr == NULL)) {
         return NULL;
     }
 
-    tstr->str.length = str->length + newline + strz;
+    tstr->str.length = str->length + strz;
 
     tstr->str.start = nxt_mp_nget(state->pool, tstr->str.length);
     if (nxt_slow_path(tstr->str.start == NULL)) {
@@ -94,10 +93,6 @@ nxt_tstr_compile(nxt_tstr_state_t *state, nxt_str_t *str,
     }
 
     p = nxt_cpymem(tstr->str.start, str->start, str->length);
-
-    if (newline) {
-        *p++ = '\n';
-    }
 
     if (strz) {
         *p = '\0';
@@ -274,8 +269,7 @@ nxt_tstr_query(nxt_task_t *task, nxt_tstr_query_t *query, nxt_tstr_t *tstr,
 
     if (tstr->type == NXT_TSTR_VAR) {
         ret = nxt_var_interpreter(task, query->state, &query->cache->var,
-                                  tstr->u.var, val, query->ctx,
-                                  tstr->flags & NXT_TSTR_LOGGING);
+                                  tstr->u.var, val, query->ctx);
 
         if (nxt_slow_path(ret != NXT_OK)) {
             return NXT_ERROR;

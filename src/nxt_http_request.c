@@ -798,30 +798,14 @@ void
 nxt_http_request_close_handler(nxt_task_t *task, void *obj, void *data)
 {
     nxt_http_proto_t         proto;
-    nxt_router_conf_t        *rtcf;
     nxt_http_request_t       *r;
     nxt_http_protocol_t      protocol;
     nxt_socket_conf_joint_t  *conf;
-    nxt_router_access_log_t  *access_log;
 
     r = obj;
     proto.any = data;
 
     conf = r->conf;
-    rtcf = conf->socket_conf->router_conf;
-
-    if (!r->logged) {
-        r->logged = 1;
-
-        if (rtcf->access_log != NULL) {
-            access_log = rtcf->access_log;
-
-            if (nxt_http_cond_value(task, r, &rtcf->log_cond)) {
-                access_log->handler(task, r, access_log, rtcf->log_format);
-                return;
-            }
-        }
-    }
 
     nxt_debug(task, "http request close handler");
 
