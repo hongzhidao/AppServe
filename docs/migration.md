@@ -52,8 +52,8 @@ installation does not automatically migrate existing state or service settings.
 
 The configuration API, `libunit.a`, `unit.pc`, `nxt_unit_*` C API, and
 `*.unit.so` language module filenames retain their existing names. The Go
-import path `unit.nginx.org/go`, PHP SAPI name `unit`, and Ruby/Perl binding
-namespaces are also retained. Keeping these identifiers avoids requiring
+import path `unit.nginx.org/go`, PHP SAPI name `unit`, and Ruby binding
+namespace are also retained. Keeping these identifiers avoids requiring
 application source changes. Rebuild language modules and external applications
 against the AppServe version being deployed; retaining API names does not
 guarantee binary compatibility between different versions or builds.
@@ -67,6 +67,11 @@ Node.js application support is removed starting with AppServe 0.2.0. The
 `unit-http` package, HTTP/WebSocket bindings, module loaders, and Node.js
 container images are no longer provided. Existing `external` applications
 that depend on `unit-http` must be migrated before upgrading.
+
+Perl/PSGI application support is removed starting with AppServe 0.2.0. The
+Perl module, `appserve-perl` packages, and Perl container images are no longer
+provided. Existing applications configured with `"type": "perl"`, including
+version-qualified types, must be removed from the configuration before upgrading.
 
 ## Containers
 

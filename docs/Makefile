@@ -11,7 +11,6 @@ PACKAGES=	appserve 						\
 		appserve-python3.10 appserve-python3.13			\
 		appserve-go appserve-go1.7 appserve-go1.8 appserve-go1.9	\
 		appserve-go1.10 appserve-go1.12 appserve-go1.13		\
-		appserve-perl						\
 		appserve-ruby
 
 CURDATE:=$(shell date +"%Y-%m-%d")
