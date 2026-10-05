@@ -3,7 +3,7 @@
 		"example_java13": {
 			"processes": 1,
 			"type": "java 13",
-			"webapp": "/usr/share/doc/unit-jsc13/examples/jsc-app"
+			"webapp": "/usr/share/doc/appserve-jsc13/examples/jsc-app"
 		}
 	},
 

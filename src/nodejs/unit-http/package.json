@@ -1,7 +1,8 @@
 {
     "name": "unit-http",
     "version": "%%VERSION%%",
-    "description": "HTTP module for NGINX Unit",
+    "description": "HTTP module for AppServe",
+    "homepage": "https://github.com/hongzhidao/AppServe",
     "main": "http.js",
     "scripts": {
         "clean": "node-gyp clean",

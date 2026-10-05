@@ -1,0 +1,26 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" != "configure" ]; then
+    exit 0
+fi
+
+if ! getent group appserve >/dev/null; then
+    groupadd --system appserve >/dev/null
+fi
+
+if ! getent passwd appserve >/dev/null; then
+    useradd \
+      --system \
+      --gid appserve \
+      --no-create-home \
+      --home /nonexistent \
+      --comment "appserve user" \
+      --shell /bin/false \
+      appserve >/dev/null
+fi
+
+#DEBHELPER#
+
+exit 0

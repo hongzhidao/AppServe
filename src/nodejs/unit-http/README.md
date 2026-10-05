@@ -1,5 +1,8 @@
-[<img src="https://unit.nginx.org/_static/logo.svg" width="40%">](https://unit.nginx.org)
+# Node.js Package for AppServe
 
-# Node.js Package for NGINX Unit
+The `unit-http` package provides the Node.js HTTP binding for
+[AppServe](https://github.com/hongzhidao/AppServe), a continuation of NGINX Unit.
+The package name and API are retained for application compatibility.
 
-For details, see [NGINX Unit documentation](https://unit.nginx.org).
+The AppServe repository is currently private. For the inherited Node.js API,
+see the [upstream Unit documentation](https://unit.nginx.org).

@@ -11,8 +11,8 @@ prerequisites = {'modules': {'python': 'any'}}
 client = ApplicationPython()
 
 
-PATTERN_ROUTER = 'unit: router'
-PATTERN_CONTROLLER = 'unit: controller'
+PATTERN_ROUTER = 'appserve: router'
+PATTERN_CONTROLLER = 'appserve: controller'
 
 @pytest.fixture(autouse=True)
 def setup_method_fixture(temp_dir):

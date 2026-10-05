@@ -26,7 +26,7 @@ all: $NXT_DAEMON manpage
 
 .PHONY: $NXT_DAEMON manpage
 $NXT_DAEMON: $NXT_BUILD_DIR/$NXT_DAEMON
-manpage: $NXT_BUILD_DIR/unitd.8
+manpage: $NXT_BUILD_DIR/$NXT_DAEMON.8
 
 END
 
@@ -296,7 +296,7 @@ done
 $echo >> $NXT_MAKEFILE
 
 
-# unit executable.
+# AppServe executable.
 
 cat << END >> $NXT_MAKEFILE
 
@@ -309,20 +309,20 @@ $NXT_BUILD_DIR/$NXT_DAEMON:	$NXT_BUILD_DIR/$NXT_LIB_STATIC \\
 END
 
 
-# unitd man page
+# AppServe man page
 
 cat << END >> $NXT_MAKEFILE
 
-$NXT_BUILD_DIR/unitd.8: docs/man/unitd.8.in $NXT_BUILD_DIR/nxt_auto_config.h
+$NXT_BUILD_DIR/$NXT_DAEMON.8: docs/man/appserved.8.in $NXT_BUILD_DIR/nxt_auto_config.h
 	sed -e "s|%%ERROR_LOG_PATH%%|$NXT_LOG|" \\
 		-e "s|%%PID_PATH%%|$NXT_PID|" \\
 		-e "s|%%SOCKET_PATH%%|$NXT_CONTROL|" \\
-		< docs/man/unitd.8.in > \$@
+		< docs/man/appserved.8.in > \$@
 
 END
 
 
-# unit object files.
+# AppServe object files.
 
 for nxt_src in $NXT_MAKE_SRCS
 do
@@ -371,7 +371,7 @@ ${NXT_DAEMON}-install: $NXT_DAEMON install-check
 
 manpage-install: manpage install-check
 	install -d \$(DESTDIR)$NXT_MANDIR/man8
-	install -p -m644 $NXT_BUILD_DIR/unitd.8 \$(DESTDIR)$NXT_MANDIR/man8/
+	install -p -m644 $NXT_BUILD_DIR/$NXT_DAEMON.8 \$(DESTDIR)$NXT_MANDIR/man8/
 
 .PHONY: uninstall ${NXT_DAEMON}-uninstall manpage-uninstall
 
@@ -382,7 +382,7 @@ ${NXT_DAEMON}-uninstall:
 	@rmdir -p \$(DESTDIR)$NXT_SBINDIR 2>/dev/null || true
 
 manpage-uninstall:
-	rm -f \$(DESTDIR)$NXT_MANDIR/man8/unitd.8
+	rm -f \$(DESTDIR)$NXT_MANDIR/man8/$NXT_DAEMON.8
 	@rmdir -p \$(DESTDIR)$NXT_MANDIR/man8 2>/dev/null || true
 
 END

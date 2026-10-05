@@ -11,7 +11,8 @@
 #include <nxt_auto_config.h>
 #include <nxt_version.h>
 
-#define NXT_SERVER                   "Unit/" NXT_VERSION
+#define NXT_PRODUCT                  "AppServe"
+#define NXT_SERVER                   NXT_PRODUCT "/" NXT_VERSION
 
 typedef struct nxt_port_s            nxt_port_t;
 typedef struct nxt_task_s            nxt_task_t;

@@ -815,7 +815,7 @@ nxt_unit_read_env(nxt_unit_port_t *ready_port, nxt_unit_port_t *router_port,
 
     version_end = strchr(unit_init, ';');
     if (nxt_slow_path(version_end == NULL)) {
-        nxt_unit_alert(NULL, "Unit version not found in %s=\"%s\"",
+        nxt_unit_alert(NULL, "AppServe version not found in %s=\"%s\"",
                        NXT_UNIT_INIT_ENV, unit_init);
 
         return NXT_UNIT_ERROR;
@@ -827,7 +827,7 @@ nxt_unit_read_env(nxt_unit_port_t *ready_port, nxt_unit_port_t *router_port,
          || memcmp(unit_init, NXT_VERSION, nxt_length(NXT_VERSION));
 
     if (nxt_slow_path(rc != 0)) {
-        nxt_unit_alert(NULL, "versions mismatch: the Unit daemon has version "
+        nxt_unit_alert(NULL, "versions mismatch: the AppServe daemon has version "
                        "%.*s, while the app was compiled with libunit %s",
                        (int) version_length, unit_init, NXT_VERSION);
 
@@ -6691,7 +6691,7 @@ nxt_unit_snprint_prefix(char *p, char *end, pid_t pid, int level)
 #endif
 
     p += snprintf(p, end - p,
-                  "[%s] %d#%"PRIu64" [unit] ", nxt_unit_log_levels[level],
+                  "[%s] %d#%"PRIu64" [appserve] ", nxt_unit_log_levels[level],
                   (int) pid,
                   (uint64_t) (uintptr_t) nxt_thread_get_tid());
 

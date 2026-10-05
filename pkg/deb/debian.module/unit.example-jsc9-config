@@ -3,7 +3,7 @@
 		"example_java9": {
 			"processes": 1,
 			"type": "java 9",
-			"webapp": "/usr/share/doc/unit-jsc9/examples/jsc-app"
+			"webapp": "/usr/share/doc/appserve-jsc9/examples/jsc-app"
 		}
 	},
 

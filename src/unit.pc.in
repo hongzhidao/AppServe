@@ -3,9 +3,9 @@ libdir=@LIBDIR@
 confargs=@CONFARGS@
 modulesdir=@MODULESDIR@
 
-Name: unit
-Description: library to embed Unit
+Name: AppServe
+Description: library to embed AppServe applications
 Version: @VERSION@
-URL: https://unit.nginx.org
+URL: https://github.com/hongzhidao/AppServe
 Cflags: @CFLAGS@
 Libs: -L${libdir} -lunit @EXTRA_LIBS@

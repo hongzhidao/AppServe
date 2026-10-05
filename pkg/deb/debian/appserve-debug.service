@@ -1,0 +1,14 @@
+[Unit]
+Description=AppServe (debug)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=forking
+PIDFile=/var/run/appserve.pid
+EnvironmentFile=-/etc/default/appserve
+ExecStart=/usr/sbin/appserved-debug $DAEMON_ARGS
+ExecReload=
+
+[Install]
+WantedBy=multi-user.target

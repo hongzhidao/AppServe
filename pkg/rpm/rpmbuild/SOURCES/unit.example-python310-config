@@ -3,7 +3,7 @@
 		"example_python": {
 			"type": "python 3.10",
 			"processes": 2,
-			"path": "/usr/share/doc/unit-python310/examples/python-app",
+			"path": "/usr/share/doc/appserve-python310/examples/python-app",
 			"module": "wsgi"
 		}
 	},

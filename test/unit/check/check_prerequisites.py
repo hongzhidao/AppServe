@@ -30,7 +30,7 @@ def check_prerequisites(prerequisites):
 
     if missed:
         pytest.skip(
-            f'Unit has no {", ".join(missed)} module(s)',
+            f'AppServe has no {", ".join(missed)} module(s)',
             allow_module_level=True,
         )
 

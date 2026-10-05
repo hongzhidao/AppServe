@@ -5,7 +5,7 @@ import time
 
 from unit.option import option
 
-UNIT_LOG = 'unit.log'
+UNIT_LOG = 'appserve.log'
 
 
 def print_log_on_assert(func):

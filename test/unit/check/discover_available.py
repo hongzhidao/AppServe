@@ -14,7 +14,7 @@ from unit.option import option
 
 def discover_available(unit):
     output_version = subprocess.check_output(
-        [unit['unitd'], '--version'], stderr=subprocess.STDOUT
+        [unit['appserved'], '--version'], stderr=subprocess.STDOUT
     ).decode()
 
     # wait for controller start

@@ -3,7 +3,7 @@
 		"example_python": {
 			"type": "python 3.4",
 			"processes": 2,
-			"path": "/usr/share/doc/unit-python34/examples/python-app",
+			"path": "/usr/share/doc/appserve-python34/examples/python-app",
 			"module": "wsgi"
 		}
 	},

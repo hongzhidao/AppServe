@@ -37,13 +37,13 @@ def pytest_addoption(parser):
         "--print-log",
         default=False,
         action="store_true",
-        help="Print unit.log to stdout in case of errors",
+        help="Print appserve.log to stdout in case of errors",
     )
     parser.addoption(
         "--save-log",
         default=False,
         action="store_true",
-        help="Save unit.log after the test execution",
+        help="Save appserve.log after the test execution",
     )
     parser.addoption(
         "--unsafe",
@@ -54,7 +54,7 @@ def pytest_addoption(parser):
     parser.addoption(
         "--user",
         type=str,
-        help="Default user for non-privileged processes of unitd",
+        help="Default user for non-privileged processes of appserved",
     )
     parser.addoption(
         "--fds-threshold",
@@ -66,7 +66,7 @@ def pytest_addoption(parser):
         "--restart",
         default=False,
         action="store_true",
-        help="Force Unit to restart after every test",
+        help="Force AppServe to restart after every test",
     )
 
 
@@ -74,9 +74,9 @@ unit_instance = {}
 _processes = []
 _fds_info = {
     'main': {'fds': 0, 'skip': False},
-    'router': {'name': 'unit: router', 'pid': -1, 'fds': 0, 'skip': False},
+    'router': {'name': 'appserve: router', 'pid': -1, 'fds': 0, 'skip': False},
     'controller': {
-        'name': 'unit: controller',
+        'name': 'appserve: controller',
         'pid': -1,
         'fds': 0,
         'skip': False,
@@ -103,7 +103,7 @@ def pytest_configure(config):
     )
     option.test_dir = f'{option.current_dir}/test'
 
-    option.cache_dir = tempfile.mkdtemp(prefix='unit-test-cache-')
+    option.cache_dir = tempfile.mkdtemp(prefix='appserve-test-cache-')
     public_dir(option.cache_dir)
 
     # set stdout to non-blocking
@@ -239,7 +239,7 @@ def run(request):
 
     _check_fds(log=log)
 
-    # print unit.log in case of error
+    # print appserve.log in case of error
 
     if hasattr(request.node, 'rep_call') and request.node.rep_call.failed:
         Log.print_log(log)
@@ -247,7 +247,7 @@ def run(request):
     if error_stop_unit or error_stop_processes:
         Log.print_log(log)
 
-    # check unit.log for errors
+    # check appserve.log for errors
 
     assert error_stop_unit is None, 'stop unit'
     assert error_stop_processes is None, 'stop processes'
@@ -258,16 +258,16 @@ def run(request):
 def unit_run(state_dir=None):
     global unit_instance
 
-    if not option.restart and 'unitd' in unit_instance:
+    if not option.restart and 'appserved' in unit_instance:
         return unit_instance
 
     build_dir = option.current_dir + '/build'
-    unitd = build_dir + '/unitd'
+    appserved = build_dir + '/appserved'
 
-    if not os.path.isfile(unitd):
-        exit('Could not find unit')
+    if not os.path.isfile(appserved):
+        exit('Could not find AppServe')
 
-    temp_dir = tempfile.mkdtemp(prefix='unit-test-')
+    temp_dir = tempfile.mkdtemp(prefix='appserve-test-')
     option.temp_dir = temp_dir
     public_dir(temp_dir)
 
@@ -278,38 +278,40 @@ def unit_run(state_dir=None):
     if not os.path.isdir(state):
         os.mkdir(state)
 
-    unitd_args = [
-        unitd,
+    appserved_args = [
+        appserved,
         '--no-daemon',
         '--modules',
         build_dir,
         '--state',
         state,
         '--pid',
-        temp_dir + '/unit.pid',
+        temp_dir + '/appserve.pid',
         '--log',
-        temp_dir + '/unit.log',
+        temp_dir + '/appserve.log',
         '--control',
-        'unix:' + temp_dir + '/control.unit.sock',
+        'unix:' + temp_dir + '/control.appserve.sock',
         '--tmp',
         temp_dir,
     ]
 
     if option.user:
-        unitd_args.extend(['--user', option.user])
+        appserved_args.extend(['--user', option.user])
 
-    with open(temp_dir + '/unit.log', 'w') as log:
-        unit_instance['process'] = subprocess.Popen(unitd_args, stderr=log)
+    with open(temp_dir + '/appserve.log', 'w') as log:
+        unit_instance['process'] = subprocess.Popen(appserved_args, stderr=log)
 
-    if not waitforfiles(temp_dir + '/control.unit.sock'):
+    if not waitforfiles(
+        temp_dir + '/control.appserve.sock', temp_dir + '/appserve.pid'
+    ):
         Log.print_log()
-        exit('Could not start unit')
+        exit('Could not start AppServe')
 
     unit_instance['temp_dir'] = temp_dir
-    unit_instance['control_sock'] = temp_dir + '/control.unit.sock'
-    unit_instance['unitd'] = unitd
+    unit_instance['control_sock'] = temp_dir + '/control.appserve.sock'
+    unit_instance['appserved'] = appserved
 
-    with open(temp_dir + '/unit.pid', 'r') as f:
+    with open(temp_dir + '/appserve.pid', 'r') as f:
         unit_instance['pid'] = f.read().rstrip()
 
     if state_dir is None:
@@ -413,10 +415,10 @@ def _clear_temp_dir():
 
     for item in os.listdir(temp_dir):
         if item not in [
-            'control.unit.sock',
+            'control.appserve.sock',
             'state',
-            'unit.pid',
-            'unit.log',
+            'appserve.pid',
+            'appserve.log',
         ]:
             path = os.path.join(temp_dir, item)
             public_dir(path)
@@ -595,7 +597,7 @@ def require():
 
 @pytest.fixture
 def search_in_file():
-    def _search_in_file(pattern, name='unit.log', flags=re.M):
+    def _search_in_file(pattern, name='appserve.log', flags=re.M):
         return re.search(pattern, Log.read(name), flags)
 
     return _search_in_file

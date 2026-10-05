@@ -5,6 +5,26 @@
 <change_log title="unit">
 
 
+<changes apply="*" ver="0.1.0" rev="1"
+         date="" time=""
+         packager="Zhidao HONG &lt;hongzhidao@gmail.com&gt;">
+
+<change type="change">
+<para>
+the project is now AppServe, continuing the development of NGINX Unit.
+</para>
+</change>
+
+<change type="change">
+<para>
+the daemon, packages, services, and default paths use AppServe names;
+existing application API and language binding names are retained.
+</para>
+</change>
+
+</changes>
+
+
 <changes apply="unit-php
                 unit-python unit-python2.7
                 unit-python3.4 unit-python3.5 unit-python3.6 unit-python3.7

@@ -6,7 +6,8 @@ include ../shasum.mak
 DEFAULT_VERSION := $(NXT_VERSION)
 
 VERSION ?= $(DEFAULT_VERSION)
-PATCHLEVEL ?= 1
+REGISTRY ?= ghcr.io/hongzhidao/appserve
+SOURCE_ARCHIVE = appserve-$(VERSION).tar.gz
 
 EXPORT_DIR := $(VERSION)
 
@@ -34,9 +35,9 @@ endef
 
 VERSIONS_jsc ?=		11
 $(foreach jscversion, $(VERSIONS_jsc), $(eval CONTAINER_jsc$(jscversion) = openjdk:$(jscversion)-jdk))
-CONFIGURE_jsc ?=	java --jars=/usr/share/unit-jsc-common/
+CONFIGURE_jsc ?=	java --jars=/usr/share/appserve-jsc-common/
 INSTALL_jsc ?=		java-shared-install java-install
-COPY_jsc =	 		COPY --from=BUILDER /usr/share/unit-jsc-common/ /usr/share/unit-jsc-common/
+COPY_jsc =	 		COPY --from=BUILDER /usr/share/appserve-jsc-common/ /usr/share/appserve-jsc-common/
 
 VERSIONS_node ?=	16
 VARIANT_node ?=		$(VARIANT)
@@ -88,42 +89,46 @@ dockerfiles: $(addprefix Dockerfile., $(MODVERSIONS))
 build: $(addprefix build-,$(MODVERSIONS))
 tag: $(addprefix tag-,$(MODVERSIONS))
 push: $(addprefix push-,$(MODVERSIONS))
-export: $(addsuffix .tar.gz,$(addprefix $(EXPORT_DIR)/nginx-unit-$(VERSION)-,$(MODVERSIONS))) $(addsuffix .tar.gz.sha512, $(addprefix $(EXPORT_DIR)/nginx-unit-$(VERSION)-,$(MODVERSIONS)))
+export: $(addsuffix .tar.gz,$(addprefix $(EXPORT_DIR)/appserve-$(VERSION)-,$(MODVERSIONS))) $(addsuffix .tar.gz.sha512, $(addprefix $(EXPORT_DIR)/appserve-$(VERSION)-,$(MODVERSIONS)))
 
-Dockerfile.%: ../../version
+Dockerfile.%: template.Dockerfile ../../version
 	@echo "===> Building $@"
 	cat template.Dockerfile | sed \
 			-e 's,@@VERSION@@,$(VERSION),g' \
-			-e 's,@@PATCHLEVEL@@,$(PATCHLEVEL),g' \
 			-e 's,@@CONTAINER@@,$(CONTAINER_$*),g' \
 			-e 's,@@CONFIGURE@@,$(CONFIGURE_$(call modname, $*)),g' \
 			-e 's,@@INSTALL@@,$(INSTALL_$(call modname, $*)),g' \
 			-e 's,@@COPY@@,$(COPY_$(call modname, $*)),g' \
 			> $@
 
-build-%: Dockerfile.%
+$(SOURCE_ARCHIVE): FORCE
+	tar -C ../.. -czf $@ --exclude='__pycache__' --exclude='*.pyc' \
+		LICENSE NOTICE CHANGES README configure auto src go version docs/man docs/migration.md
+
+build-%: Dockerfile.% $(SOURCE_ARCHIVE)
 	docker pull $(CONTAINER_$*)
-	docker build --no-cache -t unit:$(VERSION)-$* -f Dockerfile.$* .
+	docker build --no-cache -t appserve:$(VERSION)-$* -f Dockerfile.$* .
 
 tag-%: build-%
-	docker tag unit:$(VERSION)-$* nginx/unit:$(VERSION)-$*
+	docker tag appserve:$(VERSION)-$* $(REGISTRY):$(VERSION)-$*
 
 push-%: tag-%
-	docker push nginx/unit:$(VERSION)-$*
+	docker push $(REGISTRY):$(VERSION)-$*
 
 $(EXPORT_DIR):
 	mkdir -p $@
 
-$(EXPORT_DIR)/nginx-unit-$(VERSION)-%.tar.gz: $(EXPORT_DIR) tag-%
-	docker save nginx/unit:$(VERSION)-$* | gzip > $@
+$(EXPORT_DIR)/appserve-$(VERSION)-%.tar.gz: $(EXPORT_DIR) tag-%
+	docker save $(REGISTRY):$(VERSION)-$* | gzip > $@
 
-$(EXPORT_DIR)/nginx-unit-$(VERSION)-%.tar.gz.sha512: $(EXPORT_DIR)/nginx-unit-$(VERSION)-%.tar.gz
+$(EXPORT_DIR)/appserve-$(VERSION)-%.tar.gz.sha512: $(EXPORT_DIR)/appserve-$(VERSION)-%.tar.gz
 	$(SHA512SUM) $< | sed 's,$(EXPORT_DIR)/,,' > $@
 
 all: $(addprefix Dockerfile., $(MODVERSIONS))
 
 clean:
 	rm -f $(addprefix Dockerfile., $(MODVERSIONS))
+	rm -f $(SOURCE_ARCHIVE)
 	rm -rf $(EXPORT_DIR)
 
-.PHONY: default build dockerfiles push tag export clean
+.PHONY: default build dockerfiles push tag export clean FORCE

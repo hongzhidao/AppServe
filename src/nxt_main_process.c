@@ -720,7 +720,7 @@ nxt_main_process_title(nxt_task_t *task)
 
     end = title + sizeof(title) - 1;
 
-    p = nxt_sprintf(title, end, "unit: main v" NXT_VERSION " [%s",
+    p = nxt_sprintf(title, end, "appserve: main v" NXT_VERSION " [%s",
                     nxt_process_argv[0]);
 
     for (i = 1; nxt_process_argv[i] != NULL; i++) {

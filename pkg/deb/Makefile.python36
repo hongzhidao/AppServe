@@ -1,7 +1,7 @@
 MODULES+=			python36
 MODULE_SUFFIX_python36=		python3.6
 
-MODULE_SUMMARY_python36=	Python 3.6 module for NGINX Unit
+MODULE_SUMMARY_python36=	Python 3.6 module for AppServe
 
 MODULE_VERSION_python36=	$(VERSION)
 MODULE_RELEASE_python36=	1
@@ -19,9 +19,9 @@ BUILD_DEPENDS+=		$(BUILD_DEPENDS_python36)
 MODULE_BUILD_DEPENDS_python36=,python3.6-dev
 
 define MODULE_PREINSTALL_python36
-	mkdir -p debian/unit-python3.6/usr/share/doc/unit-python3.6/examples/python-app
-	install -m 644 -p debian/unit.example-python-app debian/unit-python3.6/usr/share/doc/unit-python3.6/examples/python-app/wsgi.py
-	install -m 644 -p debian/unit.example-python3.6-config debian/unit-python3.6/usr/share/doc/unit-python3.6/examples/unit.config
+	mkdir -p debian/appserve-python3.6/usr/share/doc/appserve-python3.6/examples/python-app
+	install -m 644 -p debian/unit.example-python-app debian/appserve-python3.6/usr/share/doc/appserve-python3.6/examples/python-app/wsgi.py
+	install -m 644 -p debian/unit.example-python3.6-config debian/appserve-python3.6/usr/share/doc/appserve-python3.6/examples/appserve.config
 endef
 export MODULE_PREINSTALL_python36
 
@@ -33,12 +33,12 @@ The $(MODULE_SUMMARY_python36) has been installed.
 
 To check out the sample app, run these commands:
 
- sudo service unit restart
- cd /usr/share/doc/unit-$(MODULE_SUFFIX_python36)/examples
- sudo curl -X PUT --data-binary @unit.config --unix-socket /var/run/control.unit.sock http://localhost/config
+ sudo service appserve restart
+ cd /usr/share/doc/appserve-$(MODULE_SUFFIX_python36)/examples
+ sudo curl -X PUT --data-binary @appserve.config --unix-socket /var/run/control.appserve.sock http://localhost/config
  curl http://localhost:8400/
 
-Online documentation is available at https://unit.nginx.org
+Project repository (currently private): https://github.com/hongzhidao/AppServe
 
 ----------------------------------------------------------------------
 BANNER

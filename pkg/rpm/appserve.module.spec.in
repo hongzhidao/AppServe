@@ -21,7 +21,7 @@ BuildRequires: libopenssl-devel
 %endif
 
 %define unit_version %%UNIT_VERSION%%
-%define unit_release %%UNIT_RELEASE%%%{?dist}.ngx
+%define unit_release %%UNIT_RELEASE%%%{?dist}.appserve
 
 %define CC_OPT %{optflags}
 
@@ -30,23 +30,23 @@ BuildRequires: libopenssl-devel
 Name: %%NAME%%
 Summary: %%SUMMARY%%
 Version: %%VERSION%%
-Release: %%RELEASE%%%{?dist}.ngx
+Release: %%RELEASE%%%{?dist}.appserve
 License: ASL 2.0
 Vendor: %%PACKAGE_VENDOR%%
-URL: https://unit.nginx.org/
+URL: https://github.com/hongzhidao/AppServe
 Group: System Environment/Daemons
 
-Source0: unit-%{version}.tar.gz
+Source0: appserve-%{version}.tar.gz
 %%MODULE_SOURCES%%
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 BuildRequires: pcre2-devel
 
-Requires: unit == %%UNIT_VERSION%%-%%UNIT_RELEASE%%%{?dist}.ngx
+Requires: appserve == %%UNIT_VERSION%%-%%UNIT_RELEASE%%%{?dist}.appserve
 
 %description
-NGINX Unit is a runtime and delivery environment for modern distributed
+AppServe is a runtime and delivery environment for modern distributed
 applications. It runs the application code in multiple languages
 (PHP, Python, Go, etc.), and tightly couples it with traffic delivery
 in and out of the application. Take this application server and proxy
@@ -69,7 +69,7 @@ tar --strip-components=1 -zxf %{SOURCE0}
 %build
 ./configure \
 	%{CONFIGURE_ARGS} \
-	--modules=%{_libdir}/unit/debug-modules \
+	--modules=%{_libdir}/appserve/debug-modules \
 	--cc-opt="%{CC_OPT}" \
 	--debug
 ./configure %%MODULE_CONFARGS%%
@@ -77,7 +77,7 @@ make %%MODULE_MAKEARGS%%
 %{__mv} build build-debug
 ./configure \
 	%{CONFIGURE_ARGS} \
-	--modules=%{_libdir}/unit/modules \
+	--modules=%{_libdir}/appserve/modules \
 	--cc-opt="%{CC_OPT}"
 ./configure %%MODULE_CONFARGS%%
 make %%MODULE_MAKEARGS%%
@@ -86,13 +86,16 @@ make %%MODULE_MAKEARGS%%
 %install
 %{__rm} -rf %{buildroot}
 %{__mkdir} -p %{buildroot}%{_datadir}/doc/%%NAME%%
-if [ `basename %{SOURCE100}` == COPYRIGHT.%{name} ]; then
+case `basename %{SOURCE100}` in
+COPYRIGHT.*)
 %{__install} -m 644 -p %{SOURCE100} \
     %{buildroot}%{_datadir}/doc/%%NAME%%/COPYRIGHT
-else
+;;
+*)
 %{__install} -m 644 -p NOTICE \
     %{buildroot}%{_datadir}/doc/%%NAME%%/COPYRIGHT
-fi
+;;
+esac
 %%MODULE_PREINSTALL%%
 %{__ln_s} build-debug build
 DESTDIR=%{buildroot} make %%MODULE_INSTARGS%%

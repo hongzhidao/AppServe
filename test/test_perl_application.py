@@ -27,7 +27,7 @@ def test_perl_application(date_to_sec_epoch, sec_epoch):
     assert resp['status'] == 200, 'status'
     headers = resp['headers']
     header_server = headers.pop('Server')
-    assert re.search(r'Unit/[\d\.]+', header_server), 'server header'
+    assert re.search(r'AppServe/[\d\.]+', header_server), 'server header'
     assert (
         headers.pop('Server-Software') == header_server
     ), 'server software header'

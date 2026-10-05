@@ -3,7 +3,7 @@
 		"example_java10": {
 			"processes": 1,
 			"type": "java 10",
-			"webapp": "/usr/share/doc/unit-jsc10/examples/jsc-app"
+			"webapp": "/usr/share/doc/appserve-jsc10/examples/jsc-app"
 		}
 	},
 

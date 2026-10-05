@@ -1,24 +1,38 @@
 
-NGINX Unit
-----------
+AppServe
+--------
 
-The documentation and binary packages are available online:
+AppServe is a dynamically configurable application server, reverse proxy,
+and static file server for UNIX-like systems.  It runs applications in
+multiple languages and exposes a control API for configuration at runtime.
 
-  http://unit.nginx.org
+AppServe continues the development and maintenance of NGINX Unit.
 
-The source code is provided under the terms of Apache License 2.0:
+Source code and issue tracking:
 
-  http://hg.nginx.org/unit
+  https://github.com/hongzhidao/AppServe
 
-Please ask questions, report issues, and send patches to the mailing list:
+The repository is currently private; access is required to view the source,
+report issues, and contribute changes.
 
-  unit@nginx.org (http://mailman.nginx.org/mailman/listinfo/unit)
+Build from source:
 
-or via Github:
+  ./configure --prefix=/usr/local/appserve
+  make
+  make install
 
-  https://github.com/nginx/unit
+Run the daemon with appserved.  Use appserved --help for command-line options
+and ./configure --help for build options.  Language modules are configured
+separately, for example with ./configure python before running make.
 
---
-NGINX, Inc.
-http://nginx.com
+See docs/migration.md for changes to executable names, packages, services,
+and default paths when migrating from Unit.  Existing language binding and
+libunit API names are retained for source compatibility.
 
+The upstream Unit documentation remains a reference for the inherited
+configuration API and application support:
+
+  https://unit.nginx.org
+
+The source code is provided under the Apache License 2.0.  See LICENSE and
+NOTICE for licensing and original author attribution.

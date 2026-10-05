@@ -792,7 +792,7 @@ nxt_runtime_conf_init(nxt_task_t *task, nxt_runtime_t *rt)
         }
 
     } else {
-        nxt_log(task, NXT_LOG_WARN, "Unit is running unprivileged, then it "
+        nxt_log(task, NXT_LOG_WARN, NXT_PRODUCT " is running unprivileged, then it "
                 "cannot use arbitrary user and group.");
     }
 
@@ -934,7 +934,7 @@ nxt_runtime_conf_read_cmd(nxt_task_t *task, nxt_runtime_t *rt)
     u_char  buf[1024];
 
     static const char  version[] =
-        "unit version: " NXT_VERSION "\n"
+        NXT_PRODUCT " version: " NXT_VERSION "\n"
         "configured as ./configure" NXT_CONFIGURE_OPTIONS "\n";
 
     static const char  no_control[] =
@@ -950,11 +950,12 @@ nxt_runtime_conf_read_cmd(nxt_task_t *task, nxt_runtime_t *rt)
 
     static const char  help[] =
         "\n"
-        "unit options:\n"
+        NXT_PRODUCT " options:\n"
         "\n"
-        "  --version            print unit version and configure options\n"
+        "  --version            print " NXT_PRODUCT " version and configure"
+                               " options\n"
         "\n"
-        "  --no-daemon          run unit in non-daemon mode\n"
+        "  --no-daemon          run " NXT_PRODUCT " in non-daemon mode\n"
         "\n"
         "  --control ADDRESS    set address of control API socket\n"
         "                       default: \"" NXT_CONTROL_SOCK "\"\n"

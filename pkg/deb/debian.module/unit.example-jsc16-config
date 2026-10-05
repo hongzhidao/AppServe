@@ -3,7 +3,7 @@
 		"example_java16": {
 			"processes": 1,
 			"type": "java 16",
-			"webapp": "/usr/share/doc/unit-jsc16/examples/jsc-app"
+			"webapp": "/usr/share/doc/appserve-jsc16/examples/jsc-app"
 		}
 	},
 

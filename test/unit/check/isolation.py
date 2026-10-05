@@ -132,7 +132,7 @@ def check_isolation():
     resp = http.put(
         url='/config',
         sock_type='unix',
-        addr=option.temp_dir + '/control.unit.sock',
+        addr=option.temp_dir + '/control.appserve.sock',
         body=json.dumps(conf),
     )
 

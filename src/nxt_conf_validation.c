@@ -1419,7 +1419,7 @@ nxt_inline nxt_int_t
 nxt_conf_vldt_unsupported(nxt_conf_validation_t *vldt, nxt_conf_value_t *value,
     void *data)
 {
-    return nxt_conf_vldt_error(vldt, "Unit is built without the \"%s\" "
+    return nxt_conf_vldt_error(vldt, NXT_PRODUCT " is built without the \"%s\" "
                                      "option support.", data);
 }
 
@@ -2069,7 +2069,7 @@ nxt_conf_vldt_match_pattern(nxt_conf_validation_t *vldt,
 
         return NXT_OK;
 #else
-        return nxt_conf_vldt_error(vldt, "Unit is built without support of "
+        return nxt_conf_vldt_error(vldt, NXT_PRODUCT " is built without support of "
                                    "regular expressions: \"--no-regex\" "
                                    "./configure option was set.");
 #endif

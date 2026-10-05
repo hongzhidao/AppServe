@@ -1,0 +1,14 @@
+/var/log/appserve/*.log {
+    daily
+    missingok
+    rotate 7
+    compress
+    delaycompress
+    nocreate
+    notifempty
+    postrotate
+        if [ -f /var/run/appserve/appserve.pid ]; then
+            /bin/kill -SIGUSR1 `cat /var/run/appserve/appserve.pid`
+        fi
+    endscript
+}

@@ -1,7 +1,7 @@
 MODULES+=		ruby
 MODULE_SUFFIX_ruby=	ruby
 
-MODULE_SUMMARY_ruby=	Ruby module for NGINX Unit
+MODULE_SUMMARY_ruby=	Ruby module for AppServe
 
 MODULE_VERSION_ruby=	$(VERSION)
 MODULE_RELEASE_ruby=	1
@@ -21,9 +21,9 @@ MODULE_BUILD_DEPENDS_ruby=,ruby-dev,ruby-rack
 MODULE_DEPENDS_ruby=,ruby-rack
 
 define MODULE_PREINSTALL_ruby
-	mkdir -p debian/unit-ruby/usr/share/doc/unit-ruby/examples
-	install -m 644 -p debian/unit.example-ruby-app debian/unit-ruby/usr/share/doc/unit-ruby/examples/ruby-app.ru
-	install -m 644 -p debian/unit.example-ruby-config debian/unit-ruby/usr/share/doc/unit-ruby/examples/unit.config
+	mkdir -p debian/appserve-ruby/usr/share/doc/appserve-ruby/examples
+	install -m 644 -p debian/unit.example-ruby-app debian/appserve-ruby/usr/share/doc/appserve-ruby/examples/ruby-app.ru
+	install -m 644 -p debian/unit.example-ruby-config debian/appserve-ruby/usr/share/doc/appserve-ruby/examples/appserve.config
 endef
 export MODULE_PREINSTALL_ruby
 
@@ -35,12 +35,12 @@ The $(MODULE_SUMMARY_ruby) has been installed.
 
 To check out the sample app, run these commands:
 
- sudo service unit restart
- cd /usr/share/doc/unit-$(MODULE_SUFFIX_ruby)/examples
- sudo curl -X PUT --data-binary @unit.config --unix-socket /var/run/control.unit.sock http://localhost/config
+ sudo service appserve restart
+ cd /usr/share/doc/appserve-$(MODULE_SUFFIX_ruby)/examples
+ sudo curl -X PUT --data-binary @appserve.config --unix-socket /var/run/control.appserve.sock http://localhost/config
  curl http://localhost:8700/
 
-Online documentation is available at https://unit.nginx.org
+Project repository (currently private): https://github.com/hongzhidao/AppServe
 
 ----------------------------------------------------------------------
 BANNER

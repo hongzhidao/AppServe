@@ -314,5 +314,5 @@ Content-Length: 6\r
         raw_resp=True,
         raw=True,
         sock_type='unix',
-        addr=temp_dir + '/control.unit.sock',
+        addr=temp_dir + '/control.appserve.sock',
     ), 'mime_types invalid'

@@ -4,7 +4,7 @@
 <xsl:output method="text"/>
 
 <xsl:param select="'generic'" name="format"/>
-<xsl:param select="'unit'" name="pkgname"/>
+<xsl:param select="'appserve'" name="pkgname"/>
 <xsl:param select="'change_log_conf.xml'" name="configuration"/>
 <xsl:param name="curdate"/>
 <xsl:param name="curtime"/>
@@ -65,13 +65,27 @@
     <xsl:variable name="time_"> <xsl:call-template name="gettime"><xsl:with-param select="@time" name="time"/><xsl:with-param select="$curtime" name="curtime"/></xsl:call-template></xsl:variable>
     <xsl:variable name="pday"> <xsl:call-template name="padded_day"><xsl:with-param select="$date_" name="date"/></xsl:call-template></xsl:variable>
     <xsl:variable name="dow"> <xsl:call-template name="day_of_week"><xsl:with-param select="$date_" name="date"/></xsl:call-template></xsl:variable>
-    <xsl:variable name="apply"> <xsl:call-template name="string_in_list"><xsl:with-param select="@apply" name="list"/><xsl:with-param select="$pkgname" name="string"/></xsl:call-template></xsl:variable>
-    <xsl:variable name="pkgname_"> <xsl:call-template name="beautify"><xsl:with-param select="$pkgname" name="pkgname"/></xsl:call-template></xsl:variable>
+    <xsl:variable name="source_pkgname">
+        <xsl:choose>
+            <xsl:when test="starts-with($pkgname, 'appserve') and @apply!='*' and not(contains(@apply, 'appserve'))">
+                <xsl:value-of select="concat('unit', substring($pkgname, 9))"/>
+            </xsl:when>
+            <xsl:otherwise><xsl:value-of select="$pkgname"/></xsl:otherwise>
+        </xsl:choose>
+    </xsl:variable>
+    <xsl:variable name="apply"> <xsl:call-template name="string_in_list"><xsl:with-param select="@apply" name="list"/><xsl:with-param select="$source_pkgname" name="string"/></xsl:call-template></xsl:variable>
+    <xsl:variable name="pkgname_"> <xsl:call-template name="beautify"><xsl:with-param select="$source_pkgname" name="pkgname"/></xsl:call-template></xsl:variable>
+    <xsl:variable name="rpm_suffix">
+        <xsl:choose>
+            <xsl:when test="starts-with($source_pkgname, 'appserve')">.appserve</xsl:when>
+            <xsl:otherwise>.ngx</xsl:otherwise>
+        </xsl:choose>
+    </xsl:variable>
 
     <xsl:choose>
-    <xsl:when test="$pkgname='unit' and $format='generic' and @rev!=1"/>
+    <xsl:when test="($pkgname='unit' or $pkgname='appserve') and $format='generic' and @rev!=1"/>
     <xsl:otherwise>
-    <xsl:if test="$apply=$pkgname">
+    <xsl:if test="$apply=$source_pkgname">
 
     <xsl:if test="$format='generic'">
         <xsl:text>&#10;</xsl:text>
@@ -92,11 +106,11 @@
                  $conf/changes/month[number(substring($date_, 6, 2))],
                  $pday, ' ',
                  substring($date_, 1, 4), ' ', @packager, ' - ',
-                 @ver, '-', @rev, '%{?dist}.ngx')"/>
+                 @ver, '-', @rev, '%{?dist}', $rpm_suffix)"/>
     </xsl:if>
 
     <xsl:if test="$format='deb'">
-        <xsl:value-of select="concat($pkgname, ' (', @ver, '-', @rev,
+        <xsl:value-of select="concat($source_pkgname, ' (', @ver, '-', @rev,
                  '~%%CODENAME%%) %%CODENAME%%; urgency=low')"/>
 
         <xsl:text>&#10;</xsl:text>
@@ -242,6 +256,7 @@
 <xsl:template name="beautify"><xsl:param name="pkgname"/>
     <xsl:choose>
         <xsl:when test="$pkgname='unit'">Unit</xsl:when>
+        <xsl:when test="$pkgname='appserve'">AppServe</xsl:when>
         <xsl:otherwise>
             <xsl:value-of select="$pkgname"/>
         </xsl:otherwise>

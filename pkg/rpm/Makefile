@@ -8,7 +8,7 @@ DEFAULT_RELEASE := 1
 VERSION ?= $(DEFAULT_VERSION)
 RELEASE ?= $(DEFAULT_RELEASE)
 
-PACKAGE_VENDOR = NGINX Packaging <nginx-packaging@f5.com>
+PACKAGE_VENDOR = Zhidao HONG <hongzhidao@gmail.com>
 
 ifeq ($(shell test `rpm --eval '0%{?rhel} -eq 6 -a 0%{?amzn} -eq 0'`; echo $$?), 0)
 OSVER = centos6
@@ -163,13 +163,13 @@ endif
 
 CONFIGURE_ARGS_COMMON=\
 	--prefix=/usr \
-	--state=%{_sharedstatedir}/unit \
-	--control="unix:/var/run/unit/control.sock" \
-	--pid=/var/run/unit/unit.pid \
-	--log=/var/log/unit/unit.log \
+	--state=%{_sharedstatedir}/appserve \
+	--control="unix:/var/run/appserve/control.sock" \
+	--pid=/var/run/appserve/appserve.pid \
+	--log=/var/log/appserve/appserve.log \
 	--tmp=/var/tmp \
-	--user=unit \
-	--group=unit \
+	--user=appserve \
+	--group=appserve \
 	--tests \
 	--openssl
 
@@ -180,19 +180,19 @@ CONFIGURE_ARGS=\
 export CR=\\n
 
 default:
-	@echo "valid targets: all modules unit $(addprefix unit-, $(MODULES)) rpmlint specs test test-debug clean"
+	@echo "valid targets: all modules appserve $(addprefix appserve-, $(MODULES)) rpmlint specs test test-debug clean"
 
-all: check-build-depends-all unit modules
+all: check-build-depends-all appserve modules
 
-modules: $(addprefix unit-, $(MODULES))
+modules: $(addprefix appserve-, $(MODULES))
 
-specs: rpmbuild/SPECS/unit.spec $(addsuffix .spec, $(addprefix rpmbuild/SPECS/unit-, $(MODULES)))
+specs: rpmbuild/SPECS/appserve.spec $(addsuffix .spec, $(addprefix rpmbuild/SPECS/appserve-, $(MODULES)))
 
 check-build-depends-%:
 	@{ \
 	case "$*" in \
 		all) pkgs="$(BUILD_DEPENDS)" ;; \
-		unit) pkgs="$(BUILD_DEPENDS_unit)" ;; \
+		appserve) pkgs="$(BUILD_DEPENDS_unit)" ;; \
 		*) pkgs="$(BUILD_DEPENDS_unit) $(BUILD_DEPENDS_$*)" ;; \
 	esac ; \
 	not_installed= ; \
@@ -216,37 +216,37 @@ check-build-depends-%:
 rpmbuild/SPECS:
 	mkdir -p rpmbuild/SPECS
 
-rpmbuild/SPECS/unit.spec: unit.spec.in ../../docs/changes.xml | rpmbuild/SPECS
-	cat unit.spec.in | \
+rpmbuild/SPECS/appserve.spec: appserve.spec.in ../../docs/changes.xml | rpmbuild/SPECS
+	cat appserve.spec.in | \
 		sed -e "s#%%VERSION%%#$(VERSION)#g" \
 		    -e "s#%%RELEASE%%#$(RELEASE)#g" \
 		    -e "s#%%CONFIGURE_ARGS%%#$(CONFIGURE_ARGS)#g" \
 		    -e "s#%%PACKAGE_VENDOR%%#$(PACKAGE_VENDOR)#g" \
-		> rpmbuild/SPECS/unit.spec
-	cd ../../docs && make ../build/unit.rpm-changelog
+		> rpmbuild/SPECS/appserve.spec
+	cd ../../docs && make ../build/appserve.rpm-changelog
 ifneq ($(DEFAULT_VERSION)$(DEFAULT_RELEASE), $(VERSION)$(RELEASE))
-	cat ../../build/unit.rpm-changelog | sed -e \
+	cat ../../build/appserve.rpm-changelog | sed -e \
 		"s/> - $(DEFAULT_VERSION)-$(DEFAULT_RELEASE)/> - $(VERSION)-$(RELEASE)/" \
-		>> rpmbuild/SPECS/unit.spec
+		>> rpmbuild/SPECS/appserve.spec
 else
-	cat ../../build/unit.rpm-changelog >> rpmbuild/SPECS/unit.spec
+	cat ../../build/appserve.rpm-changelog >> rpmbuild/SPECS/appserve.spec
 endif
 
-rpmbuild/SOURCES/unit-$(VERSION).tar.gz:
-	cd ../.. && tar -czf pkg/rpm/rpmbuild/SOURCES/unit-$(VERSION).tar.gz \
-		--transform "s#^#unit-$(VERSION)/#" \
-		LICENSE NOTICE CHANGES README configure auto src test version go pkg/contrib docs/man/unitd.8.in
+rpmbuild/SOURCES/appserve-$(VERSION).tar.gz:
+	cd ../.. && tar -czf pkg/rpm/rpmbuild/SOURCES/appserve-$(VERSION).tar.gz \
+		--transform "s#^#appserve-$(VERSION)/#" \
+		LICENSE NOTICE CHANGES README configure auto src test version go pkg/contrib docs/man/appserved.8.in docs/migration.md
 
-unit: check-build-depends-unit rpmbuild/SPECS/unit.spec rpmbuild/SOURCES/unit-$(VERSION).tar.gz
+appserve: check-build-depends-appserve rpmbuild/SPECS/appserve.spec rpmbuild/SOURCES/appserve-$(VERSION).tar.gz
 	@echo "===> Building $@ package" ; \
-	BUILDROOT=`rpmbuild -bc --short-circuit -D "_topdir \`pwd\`/rpmbuild" -D "__spec_build_pre echo bdir=%{_builddir}; exit 0" rpmbuild/SPECS/unit.spec | grep ^bdir= | cut -d'=' -f 2` ; \
-	rpmbuild -D "_topdir `pwd`/rpmbuild" -ba --noclean rpmbuild/SPECS/unit.spec && \
+	BUILDROOT=`rpmbuild -bc --short-circuit -D "_topdir \`pwd\`/rpmbuild" -D "__spec_build_pre echo bdir=%{_builddir}; exit 0" rpmbuild/SPECS/appserve.spec | grep ^bdir= | cut -d'=' -f 2` ; \
+	rpmbuild -D "_topdir `pwd`/rpmbuild" -ba --noclean rpmbuild/SPECS/appserve.spec && \
 	ln -s $$BUILDROOT/$@-$(VERSION)/build $@
 
 rpmlint:
 	find rpmbuild/ -name "*.rpm" -print -exec rpmlint {} \;
 
-rpmbuild/SPECS/unit-%.spec: unit.module.spec.in ../../docs/changes.xml | rpmbuild/SPECS
+rpmbuild/SPECS/appserve-%.spec: appserve.module.spec.in ../../docs/changes.xml | rpmbuild/SPECS
 	@echo "===> Creating $@"
 	@{ \
 	set -e ; \
@@ -263,7 +263,7 @@ rpmbuild/SPECS/unit-%.spec: unit.module.spec.in ../../docs/changes.xml | rpmbuil
 	postinstall=`echo "$$MODULE_POSTINSTALL_$*" | sed -e ':a' -e 'N' -e '$$!ba' -e "s/\n/\$$CR/g"` ; \
 	files=`echo "$$MODULE_FILES_$*" | sed -e ':a' -e 'N' -e '$$!ba' -e "s/\n/\$$CR/g"` ; \
 	post=`echo "$$MODULE_POST_$*" | sed -e ':a' -e 'N' -e '$$!ba' -e "s/\n/\$$CR/g"` ; \
-	cat unit.module.spec.in | sed \
+	cat appserve.module.spec.in | sed \
 		-e "s#%%NAME%%#$${pkgname}#g" \
 		-e "s#%%SUMMARY%%#$(MODULE_SUMMARY_$*)#g" \
 		-e "s#%%VERSION%%#$(MODULE_VERSION_$*)#g" \
@@ -283,47 +283,47 @@ rpmbuild/SPECS/unit-%.spec: unit.module.spec.in ../../docs/changes.xml | rpmbuil
 		-e "s#%%MODULE_POST%%#$${post}#g" \
 		> $@.tmp ; \
 	}
-	cd ../../docs && make ../build/unit-$(MODULE_SUFFIX_$*).rpm-changelog
-	cat ../../build/unit-$(MODULE_SUFFIX_$*).rpm-changelog | sed -e \
+	cd ../../docs && make ../build/appserve-$(MODULE_SUFFIX_$*).rpm-changelog
+	cat ../../build/appserve-$(MODULE_SUFFIX_$*).rpm-changelog | sed -e \
 		"s/> - $(DEFAULT_VERSION)-$(DEFAULT_RELEASE)/> - $(MODULE_VERSION_$*)-$(MODULE_RELEASE_$*)/" \
 		>> $@.tmp
 	mv $@.tmp $@ 
 
-unit-%: check-build-depends-% rpmbuild/SPECS/unit-%.spec rpmbuild/SOURCES/unit-$(VERSION).tar.gz
+appserve-%: check-build-depends-% rpmbuild/SPECS/appserve-%.spec rpmbuild/SOURCES/appserve-$(VERSION).tar.gz
 	@echo "===> Building $(subst _,-,$@) package" ; \
 	BUILDROOT=`rpmbuild -bc --short-circuit -D "_topdir \`pwd\`/rpmbuild" -D "__spec_build_pre echo bdir=%{_builddir}; exit 0" rpmbuild/SPECS/$@.spec | grep ^bdir= | cut -d'=' -f 2` ; \
 	rpmbuild -D "_topdir `pwd`/rpmbuild" -ba --noclean rpmbuild/SPECS/$@.spec && \
 	ln -s $$BUILDROOT/$(subst _,-,$@)-$(VERSION)/build $@
 
-test: unit modules
+test: appserve modules
 	@{ \
-	BUILDROOT=`rpmbuild -bc --short-circuit -D "_topdir \`pwd\`/rpmbuild" -D "__spec_build_pre echo bdir=%{_builddir}; exit 0" rpmbuild/SPECS/unit.spec | grep ^bdir= | cut -d'=' -f 2` ; \
+	BUILDROOT=`rpmbuild -bc --short-circuit -D "_topdir \`pwd\`/rpmbuild" -D "__spec_build_pre echo bdir=%{_builddir}; exit 0" rpmbuild/SPECS/appserve.spec | grep ^bdir= | cut -d'=' -f 2` ; \
 	NODEBUGS=`find rpmbuild/BUILD -type d -name "build-nodebug"` ; \
 	for so in `find $${NODEBUGS} -type f \( -name "*.so" -o -name "*.jar" \)`; do \
 		soname=`basename $${so}` ; \
 		test "$${soname}" = "java.unit.so" && continue ; \
-		test -h $$BUILDROOT/unit-$(VERSION)/build-nodebug/$${soname} || \
-		ln -fs `pwd`/$${so} $$BUILDROOT/unit-$(VERSION)/build-nodebug/$${soname} ; \
+		test -h $$BUILDROOT/appserve-$(VERSION)/build-nodebug/$${soname} || \
+		ln -fs `pwd`/$${so} $$BUILDROOT/appserve-$(VERSION)/build-nodebug/$${soname} ; \
 	done ; \
-	( cd $$BUILDROOT/unit-$(VERSION) && rm -f build && ln -s build-nodebug build && env python3 -m pytest --user=nobody $(PYTEST_ARGS) ) ; \
+	( cd $$BUILDROOT/appserve-$(VERSION) && rm -f build && ln -s build-nodebug build && env python3 -m pytest --user=nobody $(PYTEST_ARGS) ) ; \
 	}
 
-test-debug: unit modules
+test-debug: appserve modules
 	@{ \
-	BUILDROOT=`rpmbuild -bc --short-circuit -D "_topdir \`pwd\`/rpmbuild" -D "__spec_build_pre echo bdir=%{_builddir}; exit 0" rpmbuild/SPECS/unit.spec | grep ^bdir= | cut -d'=' -f 2` ; \
+	BUILDROOT=`rpmbuild -bc --short-circuit -D "_topdir \`pwd\`/rpmbuild" -D "__spec_build_pre echo bdir=%{_builddir}; exit 0" rpmbuild/SPECS/appserve.spec | grep ^bdir= | cut -d'=' -f 2` ; \
 	DEBUGS=`find rpmbuild/BUILD -type d -name "build-debug"` ; \
 	for so in `find $$DEBUGS -type f \( -name "*.so" -o -name "*.jar" \)`; do \
 		soname=`basename $${so}` ; \
 		test "$${soname}" = "java.unit.so" && continue ; \
-		test -h $$BUILDROOT/unit-$(VERSION)/build-debug/$${soname} || \
-		ln -fs `pwd`/$${so} $$BUILDROOT/unit-$(VERSION)/build-debug/$${soname} ; \
+		test -h $$BUILDROOT/appserve-$(VERSION)/build-debug/$${soname} || \
+		ln -fs `pwd`/$${so} $$BUILDROOT/appserve-$(VERSION)/build-debug/$${soname} ; \
 	done ; \
-	( cd $$BUILDROOT/unit-$(VERSION) && rm -f build && ln -s build-debug build && env python3 -m pytest --user=nobody $(PYTEST_ARGS) ) ; \
+	( cd $$BUILDROOT/appserve-$(VERSION) && rm -f build && ln -s build-debug build && env python3 -m pytest --user=nobody $(PYTEST_ARGS) ) ; \
 	}
 
 clean:
 	rm -rf rpmbuild/SPECS rpmbuild/BUILD rpmbuild/BUILDROOT rpmbuild/RPMS rpmbuild/SRPMS ../../build
-	rm -f rpmbuild/SOURCES/unit-*.tar.gz check-build-depends-*
+	rm -f rpmbuild/SOURCES/appserve-*.tar.gz check-build-depends-*
 	find . -maxdepth 1 -type l -delete
 
 .PHONY: default all modules specs rpmlint test test-debug clean

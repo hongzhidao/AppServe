@@ -1,5 +1,5 @@
 
-   NGINX Unit.
+   AppServe, derived from NGINX Unit.
 
    Copyright 2017-2021 NGINX, Inc.
    Copyright 2017-2021 Igor Sysoev
@@ -23,4 +23,3 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-

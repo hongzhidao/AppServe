@@ -54,7 +54,7 @@ class Control(HTTP1):
         args = {
             'url': url,
             'sock_type': 'unix',
-            'addr': option.temp_dir + '/control.unit.sock',
+            'addr': option.temp_dir + '/control.appserve.sock',
         }
 
         if conf is not None:

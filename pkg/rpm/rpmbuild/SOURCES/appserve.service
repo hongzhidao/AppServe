@@ -1,0 +1,27 @@
+# Modifying this file in-place is not recommended, because changes
+# will be overwritten during package upgrades.  To customize the
+# behaviour, run "systemctl edit appserve" to create an override unit.
+
+# For example, to change options given to the appserved binary at startup,
+# create an override unit (as is done by systemctl edit) and enter
+# the following:
+
+#       [Service]
+#       Environment="APPSERVED_OPTIONS=--log /var/log/appserve/appserve.log --pid /var/run/appserve/appserve.pid"
+
+[Unit]
+Description=AppServe
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=forking
+Environment="APPSERVED_OPTIONS=--log /var/log/appserve/appserve.log --pid /var/run/appserve/appserve.pid"
+ExecStart=/usr/sbin/appserved $APPSERVED_OPTIONS
+ExecReload=
+RuntimeDirectory=appserve
+RuntimeDirectoryMode=0755
+PIDFile=/run/appserve/appserve.pid
+
+[Install]
+WantedBy=multi-user.target

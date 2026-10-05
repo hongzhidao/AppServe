@@ -1,4 +1,14 @@
 
+Changes with AppServe 0.1.0                                      05 Oct 2026
+
+    *) Change: the project is now AppServe, continuing the development of
+       NGINX Unit.
+
+    *) Change: the daemon, packages, services, and default paths use
+       AppServe names; existing application API and language binding names
+       are retained.
+
+
 Changes with Unit 1.27.0                                         01 Aug 2026
 
     *) Change: selected fixes and features from later Unit releases were

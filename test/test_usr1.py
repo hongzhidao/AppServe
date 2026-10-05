@@ -52,7 +52,7 @@ def test_usr1_unit_log(search_in_file, temp_dir, unit_pid, wait_for_record
     client.load('log_body')
 
     log_new = 'new.log'
-    log_path = temp_dir + '/unit.log'
+    log_path = temp_dir + '/appserve.log'
     log_path_new = temp_dir + '/' + log_new
 
     os.rename(log_path, log_path_new)
@@ -77,7 +77,7 @@ def test_usr1_unit_log(search_in_file, temp_dir, unit_pid, wait_for_record
         assert search_in_file(body, log_new) is None, 'rename new 2'
 
     finally:
-        # merge two log files into unit.log to check alerts
+        # merge two log files into appserve.log to check alerts
 
         with open(log_path, 'r', errors='ignore') as unit_log:
             log = unit_log.read()

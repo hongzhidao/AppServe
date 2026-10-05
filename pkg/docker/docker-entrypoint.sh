@@ -7,7 +7,7 @@ SLEEPSEC=1
 
 curl_put()
 {
-    RET=`/usr/bin/curl -s -w '%{http_code}' -X PUT --data-binary @$1 --unix-socket /var/run/control.unit.sock http://localhost/$2`
+    RET=`/usr/bin/curl -s -w '%{http_code}' -X PUT --data-binary @$1 --unix-socket /var/run/control.appserve.sock http://localhost/$2`
     RET_BODY=${RET::-3}
     RET_STATUS=$(echo $RET | /usr/bin/tail -c 4)
     if [ "$RET_STATUS" -ne "200" ]; then
@@ -21,25 +21,25 @@ curl_put()
     return 0
 }
 
-if [ "$1" = "unitd" -o "$1" = "unitd-debug" ]; then
-    if /usr/bin/find "/var/lib/unit/" -mindepth 1 -print -quit 2>/dev/null | /bin/grep -q .; then
-        echo "$0: /var/lib/unit/ is not empty, skipping initial configuration..."
+if [ "$1" = "appserved" -o "$1" = "appserved-debug" ]; then
+    if /usr/bin/find "/var/lib/appserve/" -mindepth 1 -print -quit 2>/dev/null | /bin/grep -q .; then
+        echo "$0: /var/lib/appserve/ is not empty, skipping initial configuration..."
     else
         if /usr/bin/find "/docker-entrypoint.d/" -mindepth 1 -print -quit 2>/dev/null | /bin/grep -q .; then
-            echo "$0: /docker-entrypoint.d/ is not empty, launching Unit daemon to perform initial configuration..."
-            /usr/sbin/$1 --control unix:/var/run/control.unit.sock
+            echo "$0: /docker-entrypoint.d/ is not empty, launching AppServe daemon to perform initial configuration..."
+            /usr/sbin/$1 --control unix:/var/run/control.appserve.sock
 
             for i in $(/usr/bin/seq $WAITLOOPS); do
-                if [ ! -S /var/run/control.unit.sock ]; then
+                if [ ! -S /var/run/control.appserve.sock ]; then
                     echo "$0: Waiting for control socket to be created..."
                     /bin/sleep $SLEEPSEC
                 else
                     break
                 fi
             done
-            # even when the control socket exists, it does not mean unit has finished initialisation
-            # this curl call will get a reply once unit is fully launched
-            /usr/bin/curl -f -s -X GET --unix-socket /var/run/control.unit.sock http://localhost/
+            # even when the control socket exists, AppServe may still be initialising
+            # this curl call will get a reply once AppServe is fully launched
+            /usr/bin/curl -f -s -X GET --unix-socket /var/run/control.appserve.sock http://localhost/
 
             echo "$0: Looking for certificate bundles in /docker-entrypoint.d/..."
             for f in $(/usr/bin/find /docker-entrypoint.d/ -type f -name "*.pem"); do
@@ -64,24 +64,24 @@ if [ "$1" = "unitd" -o "$1" = "unitd-debug" ]; then
                 echo "$0: Ignoring $f";
             done
 
-            echo "$0: Stopping Unit daemon after initial configuration..."
-            kill -TERM `/bin/cat /var/run/unit.pid`
+            echo "$0: Stopping AppServe daemon after initial configuration..."
+            kill -TERM `/bin/cat /var/run/appserve.pid`
 
             for i in $(/usr/bin/seq $WAITLOOPS); do
-                if [ -S /var/run/control.unit.sock ]; then
+                if [ -S /var/run/control.appserve.sock ]; then
                     echo "$0: Waiting for control socket to be removed..."
                     /bin/sleep $SLEEPSEC
                 else
                     break
                 fi
             done
-            if [ -S /var/run/control.unit.sock ]; then
-                kill -KILL $(/bin/cat /var/run/unit.pid)
-                rm -f /var/run/control.unit.sock
+            if [ -S /var/run/control.appserve.sock ]; then
+                kill -KILL $(/bin/cat /var/run/appserve.pid)
+                rm -f /var/run/control.appserve.sock
             fi
 
             echo
-            echo "$0: Unit initial configuration complete; ready for start up..."
+            echo "$0: AppServe initial configuration complete; ready for start up..."
             echo
         else
             echo "$0: /docker-entrypoint.d/ is empty, skipping initial configuration..."

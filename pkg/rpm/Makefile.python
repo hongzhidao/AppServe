@@ -1,7 +1,7 @@
 MODULES+=		python
 MODULE_SUFFIX_python=	python
 
-MODULE_SUMMARY_python=	Python module for NGINX Unit
+MODULE_SUMMARY_python=	Python module for AppServe
 
 MODULE_VERSION_python=	$(VERSION)
 MODULE_RELEASE_python=	1
@@ -22,17 +22,17 @@ endif
 BUILD_DEPENDS+=		$(BUILD_DEPENDS_python)
 
 define MODULE_PREINSTALL_python
-%{__mkdir} -p %{buildroot}%{_datadir}/doc/unit-python/examples/python-app
+%{__mkdir} -p %{buildroot}%{_datadir}/doc/appserve-python/examples/python-app
 %{__install} -m 644 -p %{SOURCE100} \
-    %{buildroot}%{_datadir}/doc/unit-python/examples/python-app/wsgi.py
+    %{buildroot}%{_datadir}/doc/appserve-python/examples/python-app/wsgi.py
 %{__install} -m 644 -p %{SOURCE101} \
-    %{buildroot}%{_datadir}/doc/unit-python/examples/unit.config
+    %{buildroot}%{_datadir}/doc/appserve-python/examples/appserve.config
 endef
 export MODULE_PREINSTALL_python
 
 define MODULE_FILES_python
-%{_libdir}/unit/modules/*
-%{_libdir}/unit/debug-modules/*
+%{_libdir}/appserve/modules/*
+%{_libdir}/appserve/debug-modules/*
 endef
 export MODULE_FILES_python
 
@@ -44,12 +44,12 @@ The $(MODULE_SUMMARY_python) has been installed.
 
 To check the sample app, run these commands:
 
- sudo service unit start
+ sudo service appserve start
  cd /usr/share/doc/%{name}/examples
- sudo curl -X PUT --data-binary @unit.config --unix-socket /var/run/unit/control.sock http://localhost/config
+ sudo curl -X PUT --data-binary @appserve.config --unix-socket /var/run/appserve/control.sock http://localhost/config
  curl http://localhost:8400/
 
-Online documentation is available at https://unit.nginx.org
+Project repository (currently private): https://github.com/hongzhidao/AppServe
 
 ----------------------------------------------------------------------
 BANNER

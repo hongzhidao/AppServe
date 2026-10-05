@@ -35,7 +35,7 @@ custom-header: BLAH
     assert resp['status'] == 200, 'status'
     headers = resp['headers']
     header_server = headers.pop('Server')
-    assert re.search(r'Unit/[\d\.]+', header_server), 'server header'
+    assert re.search(r'AppServe/[\d\.]+', header_server), 'server header'
 
     date = headers.pop('Date')
     assert date[-4:] == ' GMT', 'date header timezone'

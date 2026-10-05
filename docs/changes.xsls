@@ -3,7 +3,7 @@ X:stylesheet {
 X:output method="text";
 
 X:param format="'generic'";
-X:param pkgname="'unit'";
+X:param pkgname="'appserve'";
 X:param configuration="'change_log_conf.xml'";
 X:param curdate;
 X:param curtime;
@@ -64,13 +64,27 @@ X:template = "changes" {
     X:var time_ = { !gettime(time="@time", curtime="$curtime") }
     X:var pday = { !padded_day(date="$date_") }
     X:var dow = { !day_of_week(date="$date_") }
-    X:var apply = { !string_in_list(list="@apply", string="$pkgname") }
-    X:var pkgname_ = { !beautify(pkgname="$pkgname") }
+    X:var source_pkgname = {
+        X:choose {
+            X:when "starts-with($pkgname, 'appserve') and @apply!='*' and not(contains(@apply, 'appserve'))" {
+                !{concat('unit', substring($pkgname, 9))}
+            }
+            X:otherwise { !{$pkgname} }
+        }
+    }
+    X:var apply = { !string_in_list(list="@apply", string="$source_pkgname") }
+    X:var pkgname_ = { !beautify(pkgname="$source_pkgname") }
+    X:var rpm_suffix = {
+        X:choose {
+            X:when "starts-with($source_pkgname, 'appserve')" {.appserve}
+            X:otherwise {.ngx}
+        }
+    }
 
     X:choose {
-    X:when "$pkgname='unit' and $format='generic' and @rev!=1" {}
+    X:when "($pkgname='unit' or $pkgname='appserve') and $format='generic' and @rev!=1" {}
     X:otherwise {
-    X:if "$apply=$pkgname" {
+    X:if "$apply=$source_pkgname" {
 
     X:if "$format='generic'" {
         X:text {&#10;}
@@ -91,11 +105,11 @@ X:template = "changes" {
                  $conf/changes/month[number(substring($date_, 6, 2))],
                  $pday, ' ',
                  substring($date_, 1, 4), ' ', @packager, ' - ',
-                 @ver, '-', @rev, '%{?dist}.ngx')}
+                 @ver, '-', @rev, '%{?dist}', $rpm_suffix)}
     }
 
     X:if "$format='deb'" {
-        !{concat($pkgname, ' (', @ver, '-', @rev,
+        !{concat($source_pkgname, ' (', @ver, '-', @rev,
                  '~%%CODENAME%%) %%CODENAME%%; urgency=low')}
 
         X:text {&#10;}
@@ -250,6 +264,7 @@ X:template string_in_list(list, string) {
 X:template beautify(pkgname) {
     X:choose {
         X:when "$pkgname='unit'" {Unit}
+        X:when "$pkgname='appserve'" {AppServe}
         X:otherwise {
             !{$pkgname}
         }

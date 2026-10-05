@@ -3,7 +3,7 @@
 		"example_java15": {
 			"processes": 1,
 			"type": "java 15",
-			"webapp": "/usr/share/doc/unit-jsc15/examples/jsc-app"
+			"webapp": "/usr/share/doc/appserve-jsc15/examples/jsc-app"
 		}
 	},
 

@@ -1,7 +1,7 @@
 MODULES+=		php
 MODULE_SUFFIX_php=	php
 
-MODULE_SUMMARY_php=	PHP module for NGINX Unit
+MODULE_SUMMARY_php=	PHP module for AppServe
 
 MODULE_VERSION_php=	$(VERSION)
 MODULE_RELEASE_php=	1
@@ -26,9 +26,9 @@ endif
 BUILD_DEPENDS+=		$(BUILD_DEPENDS_php)
 
 define MODULE_PREINSTALL_php
-	mkdir -p debian/unit-php/usr/share/doc/unit-php/examples/phpinfo-app
-	install -m 644 -p debian/unit.example-php-app debian/unit-php/usr/share/doc/unit-php/examples/phpinfo-app/index.php
-	install -m 644 -p debian/unit.example-php-config debian/unit-php/usr/share/doc/unit-php/examples/unit.config
+	mkdir -p debian/appserve-php/usr/share/doc/appserve-php/examples/phpinfo-app
+	install -m 644 -p debian/unit.example-php-app debian/appserve-php/usr/share/doc/appserve-php/examples/phpinfo-app/index.php
+	install -m 644 -p debian/unit.example-php-config debian/appserve-php/usr/share/doc/appserve-php/examples/appserve.config
 endef
 export MODULE_PREINSTALL_php
 
@@ -40,12 +40,12 @@ The $(MODULE_SUMMARY_php) has been installed.
 
 To check out the sample app, run these commands:
 
- sudo service unit restart
- cd /usr/share/doc/unit-$(MODULE_SUFFIX_php)/examples
- sudo curl -X PUT --data-binary @unit.config --unix-socket /var/run/control.unit.sock http://localhost/config
+ sudo service appserve restart
+ cd /usr/share/doc/appserve-$(MODULE_SUFFIX_php)/examples
+ sudo curl -X PUT --data-binary @appserve.config --unix-socket /var/run/control.appserve.sock http://localhost/config
  curl http://localhost:8300/
 
-Online documentation is available at https://unit.nginx.org
+Project repository (currently private): https://github.com/hongzhidao/AppServe
 
 ----------------------------------------------------------------------
 BANNER

@@ -19,8 +19,8 @@ CODENAME := $(shell lsb_release -cs)
 
 BUILDDIR_unit = $(CURDIR)/debian/build-unit
 BUILDDIR_unit_debug = $(CURDIR)/debian/build-unit-debug
-INSTALLDIR = $(CURDIR)/debian/unit
-INSTALLDIR_dev = $(CURDIR)/debian/unit-dev
+INSTALLDIR = $(CURDIR)/debian/appserve
+INSTALLDIR_dev = $(CURDIR)/debian/appserve-dev
 BASEDIR = $(CURDIR)
 
 DOTESTS = 0
@@ -44,7 +44,8 @@ config.env.%: njs
 	cp -Pa $(CURDIR)/README $(BUILDDIR_$*)/
 	cp -Pa $(CURDIR)/go $(BUILDDIR_$*)/
 	mkdir -p $(BUILDDIR_$*)/docs/man
-	cp -Pa $(CURDIR)/docs/man/unitd.8.in $(BUILDDIR_$*)/docs/man/
+	cp -Pa $(CURDIR)/docs/man/appserved.8.in $(BUILDDIR_$*)/docs/man/
+	cp -Pa $(CURDIR)/docs/migration.md $(BUILDDIR_$*)/docs/
 	touch $@
 
 configure.unit: config.env.unit
@@ -52,7 +53,7 @@ configure.unit: config.env.unit
 	PKG_CONFIG_PATH=$(CURDIR)/pkg/contrib/njs/build \
 	CFLAGS= ./configure \
 		%%CONFIGURE_ARGS%% \
-		--modules=/usr/lib/unit/modules \
+		--modules=/usr/lib/appserve/modules \
 		--libdir=/usr/lib/$(DEB_HOST_MULTIARCH) \
 		--cc-opt="$(CFLAGS)" \
 		--ld-opt="$(LDFLAGS)"
@@ -63,7 +64,7 @@ configure.unit_debug: config.env.unit_debug
 	PKG_CONFIG_PATH=$(CURDIR)/pkg/contrib/njs/build \
 	CFLAGS= ./configure \
 		%%CONFIGURE_ARGS%% \
-		--modules=/usr/lib/unit/debug-modules \
+		--modules=/usr/lib/appserve/debug-modules \
 		--libdir=/usr/lib/$(DEB_HOST_MULTIARCH) \
 		--cc-opt="$(CFLAGS)" \
 		--ld-opt="$(LDFLAGS)" \
@@ -111,18 +112,19 @@ install: build do.tests
 	dh_testroot
 	dh_prep
 	dh_installdirs
-	dh_installsystemd -punit --name=unit unit.service
-	dh_installsystemd -punit --name=unit-debug --no-start --no-enable unit-debug.service
+	dh_installsystemd -pappserve --name=appserve appserve.service
+	dh_installsystemd -pappserve --name=appserve-debug --no-start --no-enable appserve-debug.service
 	dh_installlogrotate
 	cd $(BUILDDIR_unit) && DESTDIR=$(INSTALLDIR) make install
 	cd $(BUILDDIR_unit) && DESTDIR=$(INSTALLDIR_dev) make libunit-install
-	install -m 755 $(BUILDDIR_unit_debug)/build/unitd $(INSTALLDIR)/usr/sbin/unitd-debug
+	install -m 755 $(BUILDDIR_unit_debug)/build/appserved $(INSTALLDIR)/usr/sbin/appserved-debug
 	install -m 644 $(BUILDDIR_unit_debug)/build/libunit.a $(INSTALLDIR_dev)/usr/lib/$(DEB_HOST_MULTIARCH)/libunit-debug.a
-	mkdir -p $(INSTALLDIR)/usr/share/doc/unit/examples
-	install -m 644 debian/unit.example.config $(INSTALLDIR)/usr/share/doc/unit/examples/example.config
-	install -m 644 CHANGES $(INSTALLDIR)/usr/share/doc/unit/changelog
-	install -m 644 README $(INSTALLDIR)/usr/share/doc/unit/
-	install -m 644 NOTICE $(INSTALLDIR)/usr/share/doc/unit/
+	mkdir -p $(INSTALLDIR)/usr/share/doc/appserve/examples
+	install -m 644 debian/unit.example.config $(INSTALLDIR)/usr/share/doc/appserve/examples/example.config
+	install -m 644 CHANGES $(INSTALLDIR)/usr/share/doc/appserve/changelog
+	install -m 644 README $(INSTALLDIR)/usr/share/doc/appserve/
+	install -m 644 NOTICE $(INSTALLDIR)/usr/share/doc/appserve/
+	install -m 644 docs/migration.md $(INSTALLDIR)/usr/share/doc/appserve/
 
 binary-indep: build install
 	dh_testdir
@@ -130,7 +132,7 @@ binary-indep: build install
 	dh_installdocs
 	dh_installchangelogs
 	dh_link
-	dh_strip --dbg-package=unit-dbg
+	dh_strip --dbg-package=appserve-dbg
 	dh_shlibdeps
 	dh_compress
 	dh_fixperms

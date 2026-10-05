@@ -3,17 +3,19 @@
 DEST=	../build
 XSLS?=	xslscript.pl
 
-PACKAGES=	unit 							\
-		unit-php 						\
-		unit-python unit-python2.7 unit-python3.4		\
-		unit-python3.5 unit-python3.6 unit-python3.7		\
-		unit-python3.8 unit-python3.9				\
-		unit-go unit-go1.7 unit-go1.8 unit-go1.9 unit-go1.10	\
-		unit-go1.12 unit-go1.13					\
-		unit-perl						\
-		unit-ruby						\
-		unit-jsc-common unit-jsc8 unit-jsc10 unit-jsc11		\
-		unit-jsc13 unit-jsc14 unit-jsc15 unit-jsc16 unit-jsc17
+PACKAGES=	appserve 						\
+		appserve-php 						\
+		appserve-python appserve-python2.7 appserve-python3.4	\
+		appserve-python3.5 appserve-python3.6 appserve-python3.7	\
+		appserve-python3.8 appserve-python3.9			\
+		appserve-python3.10 appserve-python3.13			\
+		appserve-go appserve-go1.7 appserve-go1.8 appserve-go1.9	\
+		appserve-go1.10 appserve-go1.12 appserve-go1.13		\
+		appserve-perl						\
+		appserve-ruby						\
+		appserve-jsc-common appserve-jsc8 appserve-jsc10		\
+		appserve-jsc11 appserve-jsc13 appserve-jsc14		\
+		appserve-jsc15 appserve-jsc16 appserve-jsc17 appserve-jsc18
 
 CURDATE:=$(shell date +"%Y-%m-%d")
 CURTIME:=$(shell date +"%H:%M:%S %z")

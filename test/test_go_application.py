@@ -28,7 +28,7 @@ def test_go_application_variables(date_to_sec_epoch, sec_epoch):
     assert resp['status'] == 200, 'status'
     headers = resp['headers']
     header_server = headers.pop('Server')
-    assert re.search(r'Unit/[\d\.]+', header_server), 'server header'
+    assert re.search(r'AppServe/[\d\.]+', header_server), 'server header'
 
     date = headers.pop('Date')
     assert date[-4:] == ' GMT', 'date header timezone'

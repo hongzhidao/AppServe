@@ -3,7 +3,7 @@
 		"example_java8": {
 			"processes": 1,
 			"type": "java 1.8.0",
-			"webapp": "/usr/share/doc/unit-jsc8/examples/jsc-app"
+			"webapp": "/usr/share/doc/appserve-jsc8/examples/jsc-app"
 		}
 	},
 
