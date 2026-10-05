@@ -74,7 +74,7 @@ nxt_event_conn_job_sendfile_start(nxt_task_t *task, void *obj, void *data)
 
         if (nxt_sendbuf_mem_coalesce(c->socket.task, &sb) != 0 || !sb.sync) {
 
-            jbs->job.thread_pool = c->u.thread_pool;
+            jbs->job.thread_pool = c->thread_pool;
             jbs->job.log = c->socket.log;
             jbs->out = c->write;
             c->write = NULL;

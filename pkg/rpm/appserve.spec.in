@@ -4,21 +4,12 @@
 
 %if 0%{?rhel}%{?fedora}
 BuildRequires: gcc
-%if 0%{?amzn2}
-BuildRequires: openssl11-devel
-%else
-BuildRequires: openssl-devel
-%endif
 %endif
 
 %if 0%{?rhel}
 %if 0%{?amzn} == 0
 %define dist .el%{?rhel}
 %endif
-%endif
-
-%if 0%{?suse_version} >= 1315
-BuildRequires: libopenssl-devel
 %endif
 
 %define CC_OPT %{optflags} -fPIC

@@ -86,6 +86,20 @@ upgrading. Configurations containing this option, including an empty object,
 are rejected as having an unknown parameter. Configure custom response headers
 in the application or front-end proxy instead.
 
+## TLS compatibility
+
+Built-in TLS support is removed starting with AppServe 0.2.0. Remove `tls`
+objects from listener configurations before upgrading and terminate TLS at a
+front-end proxy. TLS backends, certificate management, SNI, and TLS session
+settings are no longer provided. The `/certificates` control API is removed,
+and AppServe no longer loads certificates from the state directory or uploads
+PEM bundles from `/docker-entrypoint.d/`.
+
+Applications can still receive the original HTTPS scheme through a listener's
+`forwarded.protocol` setting. Configure its `source` to match the front-end
+proxy. Scheme-based routing and application scheme metadata continue to use
+this forwarded value.
+
 ## Containers
 
 Generate Dockerfiles with `make -C pkg/docker dockerfiles` and build images with

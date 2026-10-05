@@ -244,6 +244,28 @@ def test_applications_relative_path():
         'applications',
     ), 'relative path'
 
+@pytest.mark.parametrize('tls', [{}, {'certificate': 'bundle'}])
+def test_listeners_tls_unsupported(tls):
+    assert 'success' in try_addr('*:8080')
+    before = client.conf_get()
+
+    result = client.conf(
+        {'*:8080': {'pass': 'routes', 'tls': tls}}, 'listeners'
+    )
+
+    assert 'error' in result, 'unsupported TLS listener'
+    assert result['detail'] == 'Unknown parameter "tls".'
+    assert client.conf_get() == before, 'configuration unchanged'
+    assert client.get()['status'] == 200, 'HTTP listener still works'
+
+@pytest.mark.parametrize('path', ['/certificates', '/certificates/bundle'])
+@pytest.mark.parametrize('method', ['GET', 'PUT', 'DELETE'])
+def test_certificates_api_removed(method, path):
+    args = client._get_args(path, 'bundle' if method == 'PUT' else None)
+
+    assert client.http(method, **args)['status'] == 404
+    assert 'certificates' not in client.conf_get('/')
+
 @pytest.mark.skip('not yet, unsafe')
 def test_listeners_empty():
     assert 'error' in client.conf(

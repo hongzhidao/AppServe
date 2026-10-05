@@ -72,10 +72,6 @@ typedef struct {
 
 
 typedef struct {
-#if (NXT_TLS)
-    nxt_queue_t            tls;        /* of nxt_router_tlssock_t */
-#endif
-
 #if (NXT_HAVE_NJS)
     nxt_queue_t            js_modules;
 #endif
@@ -208,9 +204,6 @@ typedef struct {
     nxt_http_forward_t     *forwarded;
     nxt_http_forward_t     *client_ip;
 
-#if (NXT_TLS)
-    nxt_tls_conf_t         *tls;
-#endif
 } nxt_socket_conf_t;
 
 

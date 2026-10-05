@@ -41,12 +41,6 @@ if [ "$1" = "appserved" -o "$1" = "appserved-debug" ]; then
             # this curl call will get a reply once AppServe is fully launched
             /usr/bin/curl -f -s -X GET --unix-socket /var/run/control.appserve.sock http://localhost/
 
-            echo "$0: Looking for certificate bundles in /docker-entrypoint.d/..."
-            for f in $(/usr/bin/find /docker-entrypoint.d/ -type f -name "*.pem"); do
-                echo "$0: Uploading certificates bundle: $f"
-                curl_put $f "certificates/$(basename $f .pem)"
-            done
-
             echo "$0: Looking for configuration snippets in /docker-entrypoint.d/..."
             for f in $(/usr/bin/find /docker-entrypoint.d/ -type f -name "*.json"); do
                 echo "$0: Applying configuration $f";
@@ -60,7 +54,7 @@ if [ "$1" = "appserved" -o "$1" = "appserved-debug" ]; then
             done
 
             # warn on filetypes we don't know what to do with
-            for f in $(/usr/bin/find /docker-entrypoint.d/ -type f -not -name "*.sh" -not -name "*.json" -not -name "*.pem"); do
+            for f in $(/usr/bin/find /docker-entrypoint.d/ -type f -not -name "*.sh" -not -name "*.json"); do
                 echo "$0: Ignoring $f";
             done
 

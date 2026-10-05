@@ -4,7 +4,7 @@ COPY appserve-0.1.0.tar.gz /usr/src/appserve.tar.gz
 
 RUN set -ex \
     && apt-get update \
-    && apt-get install --no-install-recommends --no-install-suggests -y ca-certificates build-essential libssl-dev libpcre2-dev \
+    && apt-get install --no-install-recommends --no-install-suggests -y ca-certificates build-essential libpcre2-dev \
     && mkdir -p /usr/lib/appserve/modules /usr/lib/appserve/debug-modules /usr/src/appserve \
     && tar -xzf /usr/src/appserve.tar.gz -C /usr/src/appserve \
     && cd /usr/src/appserve \
@@ -20,7 +20,6 @@ RUN set -ex \
                 --tmp=/var/tmp \
                 --user=appserve \
                 --group=appserve \
-                --openssl \
                 --libdir=/usr/lib/$DEB_HOST_MULTIARCH" \
     && ./configure $CONFIGURE_ARGS --cc-opt="$CC_OPT" --ld-opt="$LD_OPT" --modules=/usr/lib/appserve/debug-modules --debug \
     && make -j $NCPU appserved \

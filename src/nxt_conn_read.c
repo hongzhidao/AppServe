@@ -101,21 +101,6 @@ nxt_conn_io_read(nxt_task_t *task, void *obj, void *data)
                                handler, task, c, data);
             return;
         }
-
-        /* n == NXT_AGAIN. */
-
-        if (c->socket.read_ready) {
-            /*
-             * SSL/TLS library can return NXT_AGAIN if renegotiation
-             * occured during read operation, it toggled write event
-             * internally so only read timer should be set.
-             */
-            if (!c->read_timer.enabled) {
-                nxt_conn_timer(engine, c, state, &c->read_timer);
-            }
-
-            return;
-        }
     }
 
     if (nxt_fd_event_is_disabled(c->socket.read)) {
