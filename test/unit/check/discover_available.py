@@ -5,7 +5,6 @@ from unit.check.chroot import check_chroot
 from unit.check.go import check_go
 from unit.check.isolation import check_isolation
 from unit.check.njs import check_njs
-from unit.check.node import check_node
 from unit.check.regex import check_regex
 from unit.check.tls import check_openssl
 from unit.log import Log
@@ -34,7 +33,6 @@ def discover_available(unit):
 
     option.available['modules']['go'] = check_go()
     option.available['modules']['njs'] = check_njs(output_version)
-    option.available['modules']['node'] = check_node()
     option.available['modules']['openssl'] = check_openssl(output_version)
     option.available['modules']['regex'] = check_regex(output_version)
 
