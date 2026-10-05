@@ -248,6 +248,43 @@ def test_proxy_header():
         == 431
     ), 'custom header 5'
 
+@pytest.mark.parametrize(
+    'target',
+    [
+        '/a%2Fb/%25?arg=a%2Bb&empty=',
+        '/a/../b//c?arg=1&arg=2',
+        '/path?',
+    ],
+)
+def test_proxy_request_target(target):
+    client.load('variables')
+
+    assert 'success' in client.conf(
+        {
+            'listeners': {
+                '*:8080': {'pass': 'routes'},
+                '*:8081': {'pass': 'applications/variables'},
+            },
+            'routes': [{'action': {'proxy': 'http://127.0.0.1:8081'}}],
+            'applications': client.conf_get('applications'),
+        }
+    )
+
+    resp = client.post(
+        url=target,
+        headers={
+            'Host': 'localhost',
+            'Content-Type': 'text/plain',
+            'Custom-Header': 'target-check',
+            'Connection': 'close',
+        },
+        body='payload',
+    )
+
+    assert resp['status'] == 200
+    assert resp['headers']['Request-Uri'] == target, 'original request target'
+    assert resp['body'] == 'payload'
+
 def test_proxy_fragmented():
     sock = client.http(b"""GET / HTT""", raw=True, no_recv=True)
 

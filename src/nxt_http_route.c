@@ -611,11 +611,6 @@ nxt_http_route_match_create(nxt_task_t *task, nxt_router_temp_conf_t *tmcf,
 
 static nxt_conf_map_t  nxt_http_route_action_conf[] = {
     {
-        nxt_string("rewrite"),
-        NXT_CONF_MAP_PTR,
-        offsetof(nxt_http_action_conf_t, rewrite)
-    },
-    {
         nxt_string("response_headers"),
         NXT_CONF_MAP_PTR,
         offsetof(nxt_http_action_conf_t, set_headers)
@@ -695,13 +690,6 @@ nxt_http_action_init(nxt_task_t *task, nxt_router_temp_conf_t *tmcf,
 
     rtcf = tmcf->router_conf;
     mp = rtcf->mem_pool;
-
-    if (acf.rewrite != NULL) {
-        ret = nxt_http_rewrite_init(rtcf, action, &acf);
-        if (nxt_slow_path(ret != NXT_OK)) {
-            return ret;
-        }
-    }
 
     if (acf.set_headers != NULL) {
         ret = nxt_http_set_headers_init(rtcf, action, &acf);

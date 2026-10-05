@@ -52,6 +52,26 @@ def cookie(cookie, status):
         == status
     ), 'match cookie'
 
+@pytest.mark.parametrize(
+    'action',
+    [
+        {'pass': 'routes', 'rewrite': '/new'},
+        {'return': 200, 'rewrite': '/new'},
+        {'share': '/app', 'rewrite': '/new'},
+        {'proxy': 'http://127.0.0.1:8081', 'rewrite': '/new'},
+        {'share': '/app', 'fallback': {'return': 200, 'rewrite': '/new'}},
+    ],
+)
+def test_routes_rewrite_unsupported(action):
+    before = client.conf_get()
+
+    result = route({'action': action})
+
+    assert 'error' in result, 'unsupported rewrite action'
+    assert result['detail'] == 'Unknown parameter "rewrite".'
+    assert client.conf_get() == before, 'configuration unchanged'
+    assert client.get()['status'] == 200, 'original route still works'
+
 def test_routes_match_method_positive():
     assert client.get()['status'] == 200, 'GET'
     assert client.post()['status'] == 404, 'POST'

@@ -77,6 +77,7 @@ def test_njs_variables(temp_dir):
     assert client.get(url='/?foo=str')['status'] == 200, 'args'
 
     check_expression('/${vars.header_host}')
+    check_expression('${vars.uri}', '/str')
 
     set_share(f'"`{temp_dir}/assets/${{vars[\\"arg_foo\\"]}}`"')
     assert client.get(url='/?foo=str')['status'] == 200, 'vars'
@@ -86,27 +87,6 @@ def test_njs_variables(temp_dir):
 
     create_files('undefined')
     assert client.get()['status'] == 200, 'undefined 2'
-
-
-def test_njs_variables_cacheable(temp_dir):
-    create_files('str')
-
-    def check_rewrite(rewrite, uri):
-        assert 'success' in client.conf(
-            [
-                {
-                    "action": {
-                        "rewrite": rewrite,
-                        "share": f"`{temp_dir}/assets{uri}`",
-                    },
-                },
-            ],
-            'routes',
-        )
-        assert client.get()['status'] == 200
-
-    check_rewrite('/str', '${uri}')
-    check_rewrite('/str', '${vars.uri}')
 
 
 def test_njs_variables_cacheable_access_log(findall, temp_dir):

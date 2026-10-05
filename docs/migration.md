@@ -73,6 +73,13 @@ Perl module, `appserve-perl` packages, and Perl container images are no longer
 provided. Existing applications configured with `"type": "perl"`, including
 version-qualified types, must be removed from the configuration before upgrading.
 
+## Routing compatibility
+
+The route action's `rewrite` option is removed starting with AppServe 0.2.0.
+Remove it from route actions and nested fallback actions before upgrading.
+Configurations containing this option are rejected as having an unknown
+parameter. Requests keep their original target throughout routing and proxying.
+
 ## Containers
 
 Generate Dockerfiles with `make -C pkg/docker dockerfiles` and build images with
