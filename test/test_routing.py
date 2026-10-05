@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import json
+
 import pytest
 from unit.applications.proto import ApplicationProto
 from unit.option import option
@@ -57,9 +59,7 @@ def cookie(cookie, status):
     [
         {'pass': 'routes', 'rewrite': '/new'},
         {'return': 200, 'rewrite': '/new'},
-        {'share': '/app', 'rewrite': '/new'},
         {'proxy': 'http://127.0.0.1:8081', 'rewrite': '/new'},
-        {'share': '/app', 'fallback': {'return': 200, 'rewrite': '/new'}},
     ],
 )
 def test_routes_rewrite_unsupported(action):
@@ -77,17 +77,9 @@ def test_routes_rewrite_unsupported(action):
     [
         {'pass': 'routes', 'response_headers': {'X-Foo': 'foo'}},
         {'return': 200, 'response_headers': {'X-Foo': 'foo'}},
-        {'share': '/app', 'response_headers': {'X-Foo': 'foo'}},
         {
             'proxy': 'http://127.0.0.1:8081',
             'response_headers': {'X-Foo': 'foo'},
-        },
-        {
-            'share': '/app',
-            'fallback': {
-                'return': 200,
-                'response_headers': {'X-Foo': 'foo'},
-            },
         },
     ],
 )
@@ -112,6 +104,63 @@ def test_routes_response_headers_update_unsupported(headers):
 
     assert 'error' in result, 'unsupported response_headers update'
     assert result['detail'] == 'Unknown parameter "response_headers".'
+    assert client.conf_get() == before, 'configuration unchanged'
+    assert client.get()['status'] == 200, 'original route still works'
+
+@pytest.mark.parametrize(
+    'action',
+    [
+        {'share': '/app$uri'},
+        {'share': ['/app$uri', '/assets$uri']},
+        {'share': '/app$uri', 'fallback': {'return': 200}},
+        {'share': '/app$uri', 'fallback': {'share': '/assets$uri'}},
+    ],
+)
+def test_routes_share_unsupported(action):
+    before = client.conf_get()
+
+    result = route({'action': action})
+
+    assert 'error' in result, 'unsupported share action'
+    assert result['detail'] == (
+        'The "action" object must have either "pass", "return", '
+        'or "proxy" option set.'
+    )
+    assert client.conf_get() == before, 'configuration unchanged'
+    assert client.get()['status'] == 200, 'original route still works'
+
+@pytest.mark.parametrize(
+    'action',
+    [{'pass': 'routes'}, {'return': 200}, {'proxy': 'http://127.0.0.1:8081'}],
+)
+@pytest.mark.parametrize(
+    'parameter, value',
+    [
+        ('share', '/app$uri'),
+        ('types', ['text/*']),
+        ('chroot', '/app'),
+        ('follow_symlinks', False),
+        ('traverse_mounts', False),
+        ('fallback', {'return': 200}),
+    ],
+)
+def test_routes_static_options_unsupported(action, parameter, value):
+    before = client.conf_get()
+
+    result = route({'action': {**action, parameter: value}})
+
+    assert 'error' in result, 'unsupported static action option'
+    assert result['detail'] == f'Unknown parameter "{parameter}".'
+    assert client.conf_get() == before, 'configuration unchanged'
+    assert client.get()['status'] == 200, 'original route still works'
+
+def test_routes_share_update_unsupported():
+    before = client.conf_get()
+
+    result = client.conf(json.dumps('/app$uri'), 'routes/0/action/share')
+
+    assert 'error' in result, 'unsupported share update'
+    assert result['detail'] == 'Unknown parameter "share".'
     assert client.conf_get() == before, 'configuration unchanged'
     assert client.get()['status'] == 200, 'original route still works'
 
@@ -528,7 +577,7 @@ def test_routes_route_pass_invalid():
         [{"action": {"pass": "upstreams/blah"}}], 'routes'
     ), 'route pass upstreams invalid'
 
-def test_routes_action_unique(temp_dir):
+def test_routes_action_unique():
     assert 'success' in client.conf(
         {
             "listeners": {
@@ -548,16 +597,16 @@ def test_routes_action_unique(temp_dir):
     )
 
     assert 'error' in client.conf(
-        {"proxy": "http://127.0.0.1:8081", "share": temp_dir},
+        {"proxy": "http://127.0.0.1:8081", "return": 200},
         'routes/0/action',
-    ), 'proxy share'
+    ), 'proxy return'
     assert 'error' in client.conf(
         {"proxy": "http://127.0.0.1:8081", "pass": "applications/app",},
         'routes/0/action',
     ), 'proxy pass'
     assert 'error' in client.conf(
-        {"share": temp_dir, "pass": "applications/app"}, 'routes/0/action',
-    ), 'share pass'
+        {"return": 200, "pass": "applications/app"}, 'routes/0/action',
+    ), 'return pass'
 
 def test_routes_rules_two():
     assert 'success' in client.conf(

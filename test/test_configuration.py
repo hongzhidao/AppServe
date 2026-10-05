@@ -18,6 +18,19 @@ def try_addr(addr):
         }
     )
 
+@pytest.mark.parametrize('static', [{}, {'mime_types': {'text/plain': ['txt']}}])
+def test_http_static_unsupported(static):
+    assert 'success' in try_addr('*:8080')
+    assert 'success' in client.conf({'http': {}}, 'settings')
+    before = client.conf_get()
+
+    result = client.conf(static, 'settings/http/static')
+
+    assert 'error' in result, 'unsupported static settings'
+    assert result['detail'] == 'Unknown parameter "static".'
+    assert client.conf_get() == before, 'configuration unchanged'
+    assert client.get()['status'] == 200, 'original route still works'
+
 def test_json_empty():
     assert 'error' in client.conf(''), 'empty'
 

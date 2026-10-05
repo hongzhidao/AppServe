@@ -86,6 +86,20 @@ upgrading. Configurations containing this option, including an empty object,
 are rejected as having an unknown parameter. Configure custom response headers
 in the application or front-end proxy instead.
 
+## Static file serving
+
+Built-in static file serving is removed starting with AppServe 0.2.0. Migrate
+routes using the `share` action to an application or front-end proxy before
+upgrading. The `share` action and its `types`, `chroot`, `follow_symlinks`,
+`traverse_mounts`, and `fallback` options are no longer supported. Route actions
+now support `pass`, `return`, or `proxy`.
+
+Remove `settings/http/static`, including its `mime_types` configuration, before
+upgrading. Configurations containing these removed settings are rejected,
+including an empty `static` object. File extension mapping, index files,
+directory redirects, and static file ETags must be handled by the replacement
+file server.
+
 ## TLS compatibility
 
 Built-in TLS support is removed starting with AppServe 0.2.0. Remove `tls`

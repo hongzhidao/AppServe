@@ -2,9 +2,9 @@
 AppServe
 --------
 
-AppServe is a dynamically configurable application server, reverse proxy,
-and static file server for UNIX-like systems.  It runs applications in
-multiple languages and exposes a control API for configuration at runtime.
+AppServe is a dynamically configurable application server and reverse proxy
+for UNIX-like systems.  It runs applications in multiple languages and
+exposes a control API for configuration at runtime.
 
 AppServe continues the development and maintenance of NGINX Unit.
 

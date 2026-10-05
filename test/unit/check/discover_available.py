@@ -1,7 +1,6 @@
 import subprocess
 import sys
 
-from unit.check.chroot import check_chroot
 from unit.check.go import check_go
 from unit.check.isolation import check_isolation
 from unit.check.njs import check_njs
@@ -37,5 +36,4 @@ def discover_available(unit):
     # Discover features using check. Features should be discovered after
     # modules since some features can require modules.
 
-    option.available['features']['chroot'] = check_chroot()
     option.available['features']['isolation'] = check_isolation()

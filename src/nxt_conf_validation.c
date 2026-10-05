@@ -78,15 +78,6 @@ static nxt_int_t nxt_conf_vldt_var(nxt_conf_validation_t *vldt, nxt_str_t *name,
     nxt_str_t *value);
 static nxt_int_t nxt_conf_vldt_if(nxt_conf_validation_t *vldt,
     nxt_conf_value_t *value, void *data);
-nxt_inline nxt_int_t nxt_conf_vldt_unsupported(nxt_conf_validation_t *vldt,
-    nxt_conf_value_t *value, void *data);
-
-static nxt_int_t nxt_conf_vldt_mtypes(nxt_conf_validation_t *vldt,
-    nxt_conf_value_t *value, void *data);
-static nxt_int_t nxt_conf_vldt_mtypes_type(nxt_conf_validation_t *vldt,
-    nxt_str_t *name, nxt_conf_value_t *value);
-static nxt_int_t nxt_conf_vldt_mtypes_extension(nxt_conf_validation_t *vldt,
-    nxt_conf_value_t *value);
 static nxt_int_t nxt_conf_vldt_listener(nxt_conf_validation_t *vldt,
     nxt_str_t *name, nxt_conf_value_t *value);
 static nxt_int_t nxt_conf_vldt_action(nxt_conf_validation_t *vldt,
@@ -95,10 +86,6 @@ static nxt_int_t nxt_conf_vldt_pass(nxt_conf_validation_t *vldt,
     nxt_conf_value_t *value, void *data);
 static nxt_int_t nxt_conf_vldt_return(nxt_conf_validation_t *vldt,
     nxt_conf_value_t *value, void *data);
-static nxt_int_t nxt_conf_vldt_share(nxt_conf_validation_t *vldt,
-     nxt_conf_value_t *value, void *data);
-static nxt_int_t nxt_conf_vldt_share_element(nxt_conf_validation_t *vldt,
-    nxt_conf_value_t *value);
 static nxt_int_t nxt_conf_vldt_proxy(nxt_conf_validation_t *vldt,
     nxt_conf_value_t *value, void *data);
 static nxt_int_t nxt_conf_vldt_python(nxt_conf_validation_t *vldt,
@@ -211,7 +198,6 @@ static nxt_int_t nxt_conf_vldt_js_module_element(nxt_conf_validation_t *vldt,
 static nxt_conf_vldt_object_t  nxt_conf_vldt_setting_members[];
 static nxt_conf_vldt_object_t  nxt_conf_vldt_http_members[];
 static nxt_conf_vldt_object_t  nxt_conf_vldt_websocket_members[];
-static nxt_conf_vldt_object_t  nxt_conf_vldt_static_members[];
 static nxt_conf_vldt_object_t  nxt_conf_vldt_forwarded_members[];
 static nxt_conf_vldt_object_t  nxt_conf_vldt_client_ip_members[];
 static nxt_conf_vldt_object_t  nxt_conf_vldt_match_members[];
@@ -313,11 +299,6 @@ static nxt_conf_vldt_object_t  nxt_conf_vldt_http_members[] = {
         .type       = NXT_CONF_VLDT_OBJECT,
         .validator  = nxt_conf_vldt_object,
         .u.members  = nxt_conf_vldt_websocket_members,
-    }, {
-        .name       = nxt_string("static"),
-        .type       = NXT_CONF_VLDT_OBJECT,
-        .validator  = nxt_conf_vldt_object,
-        .u.members  = nxt_conf_vldt_static_members,
     },
 
     NXT_CONF_VLDT_END
@@ -335,17 +316,6 @@ static nxt_conf_vldt_object_t  nxt_conf_vldt_websocket_members[] = {
     }, {
         .name       = nxt_string("max_frame_size"),
         .type       = NXT_CONF_VLDT_INTEGER,
-    },
-
-    NXT_CONF_VLDT_END
-};
-
-
-static nxt_conf_vldt_object_t  nxt_conf_vldt_static_members[] = {
-    {
-        .name       = nxt_string("mime_types"),
-        .type       = NXT_CONF_VLDT_OBJECT,
-        .validator  = nxt_conf_vldt_mtypes,
     },
 
     NXT_CONF_VLDT_END
@@ -510,47 +480,6 @@ static nxt_conf_vldt_object_t  nxt_conf_vldt_return_action_members[] = {
     }, {
         .name       = nxt_string("location"),
         .type       = NXT_CONF_VLDT_STRING,
-    },
-
-    NXT_CONF_VLDT_END
-};
-
-
-static nxt_conf_vldt_object_t  nxt_conf_vldt_share_action_members[] = {
-    {
-        .name       = nxt_string("share"),
-        .type       = NXT_CONF_VLDT_STRING | NXT_CONF_VLDT_ARRAY,
-        .validator  = nxt_conf_vldt_share,
-    }, {
-        .name       = nxt_string("types"),
-        .type       = NXT_CONF_VLDT_STRING | NXT_CONF_VLDT_ARRAY,
-        .validator  = nxt_conf_vldt_match_patterns,
-    }, {
-        .name       = nxt_string("fallback"),
-        .type       = NXT_CONF_VLDT_OBJECT,
-        .validator  = nxt_conf_vldt_action,
-    }, {
-        .name       = nxt_string("chroot"),
-        .type       = NXT_CONF_VLDT_STRING,
-#if !(NXT_HAVE_OPENAT2)
-        .validator  = nxt_conf_vldt_unsupported,
-        .u.string   = "chroot",
-#endif
-        .flags      = NXT_CONF_VLDT_TSTR,
-    }, {
-        .name       = nxt_string("follow_symlinks"),
-        .type       = NXT_CONF_VLDT_BOOLEAN,
-#if !(NXT_HAVE_OPENAT2)
-        .validator  = nxt_conf_vldt_unsupported,
-        .u.string   = "follow_symlinks",
-#endif
-    }, {
-        .name       = nxt_string("traverse_mounts"),
-        .type       = NXT_CONF_VLDT_BOOLEAN,
-#if !(NXT_HAVE_OPENAT2)
-        .validator  = nxt_conf_vldt_unsupported,
-        .u.string   = "traverse_mounts",
-#endif
     },
 
     NXT_CONF_VLDT_END
@@ -1165,15 +1094,6 @@ nxt_conf_vldt_error(nxt_conf_validation_t *vldt, const char *fmt, ...)
 }
 
 
-nxt_inline nxt_int_t
-nxt_conf_vldt_unsupported(nxt_conf_validation_t *vldt, nxt_conf_value_t *value,
-    void *data)
-{
-    return nxt_conf_vldt_error(vldt, NXT_PRODUCT " is built without the \"%s\" "
-                                     "option support.", data);
-}
-
-
 static nxt_int_t
 nxt_conf_vldt_var(nxt_conf_validation_t *vldt, nxt_str_t *name,
     nxt_str_t *value)
@@ -1220,108 +1140,6 @@ nxt_conf_vldt_if(nxt_conf_validation_t *vldt, nxt_conf_value_t *value,
 }
 
 
-typedef struct {
-    nxt_mp_t      *pool;
-    nxt_str_t     *type;
-    nxt_lvlhsh_t  hash;
-} nxt_conf_vldt_mtypes_ctx_t;
-
-
-static nxt_int_t
-nxt_conf_vldt_mtypes(nxt_conf_validation_t *vldt, nxt_conf_value_t *value,
-    void *data)
-{
-    nxt_int_t                   ret;
-    nxt_conf_vldt_mtypes_ctx_t  ctx;
-
-    ctx.pool = nxt_mp_create(1024, 128, 256, 32);
-    if (nxt_slow_path(ctx.pool == NULL)) {
-        return NXT_ERROR;
-    }
-
-    nxt_lvlhsh_init(&ctx.hash);
-
-    vldt->ctx = &ctx;
-
-    ret = nxt_conf_vldt_object_iterator(vldt, value,
-                                        &nxt_conf_vldt_mtypes_type);
-
-    vldt->ctx = NULL;
-
-    nxt_mp_destroy(ctx.pool);
-
-    return ret;
-}
-
-
-static nxt_int_t
-nxt_conf_vldt_mtypes_type(nxt_conf_validation_t *vldt, nxt_str_t *name,
-    nxt_conf_value_t *value)
-{
-    nxt_int_t                   ret;
-    nxt_conf_vldt_mtypes_ctx_t  *ctx;
-
-    ret = nxt_conf_vldt_type(vldt, name, value,
-                             NXT_CONF_VLDT_STRING|NXT_CONF_VLDT_ARRAY);
-    if (ret != NXT_OK) {
-        return ret;
-    }
-
-    ctx = vldt->ctx;
-
-    ctx->type = nxt_mp_get(ctx->pool, sizeof(nxt_str_t));
-    if (nxt_slow_path(ctx->type == NULL)) {
-        return NXT_ERROR;
-    }
-
-    *ctx->type = *name;
-
-    if (nxt_conf_type(value) == NXT_CONF_ARRAY) {
-        return nxt_conf_vldt_array_iterator(vldt, value,
-                                            &nxt_conf_vldt_mtypes_extension);
-    }
-
-    /* NXT_CONF_STRING */
-
-    return nxt_conf_vldt_mtypes_extension(vldt, value);
-}
-
-
-static nxt_int_t
-nxt_conf_vldt_mtypes_extension(nxt_conf_validation_t *vldt,
-    nxt_conf_value_t *value)
-{
-    nxt_str_t                   exten, *dup_type;
-    nxt_conf_vldt_mtypes_ctx_t  *ctx;
-
-    ctx = vldt->ctx;
-
-    if (nxt_conf_type(value) != NXT_CONF_STRING) {
-        return nxt_conf_vldt_error(vldt, "The \"%V\" MIME type array must "
-                                   "contain only strings.", ctx->type);
-    }
-
-    nxt_conf_get_string(value, &exten);
-
-    if (exten.length == 0) {
-        return nxt_conf_vldt_error(vldt, "An empty file extension for "
-                                         "the \"%V\" MIME type.", ctx->type);
-    }
-
-    dup_type = nxt_http_static_mtype_get(&ctx->hash, &exten);
-
-    if (dup_type->length != 0) {
-        return nxt_conf_vldt_error(vldt, "The \"%V\" file extension has been "
-                                         "declared for \"%V\" and \"%V\" "
-                                         "MIME types at the same time.",
-                                         &exten, dup_type, ctx->type);
-    }
-
-    return nxt_http_static_mtypes_hash_add(ctx->pool, &ctx->hash, &exten,
-                                           ctx->type);
-}
-
-
 static nxt_int_t
 nxt_conf_vldt_listener(nxt_conf_validation_t *vldt, nxt_str_t *name,
     nxt_conf_value_t *value)
@@ -1360,7 +1178,6 @@ nxt_conf_vldt_action(nxt_conf_validation_t *vldt, nxt_conf_value_t *value,
     } actions[] = {
         { nxt_string("pass"), nxt_conf_vldt_pass_action_members },
         { nxt_string("return"), nxt_conf_vldt_return_action_members },
-        { nxt_string("share"), nxt_conf_vldt_share_action_members },
         { nxt_string("proxy"), nxt_conf_vldt_proxy_action_members },
     };
 
@@ -1376,7 +1193,7 @@ nxt_conf_vldt_action(nxt_conf_validation_t *vldt, nxt_conf_value_t *value,
         if (members != NULL) {
             return nxt_conf_vldt_error(vldt, "The \"action\" object must have "
                                        "just one of \"pass\", \"return\", "
-                                       "\"share\", or \"proxy\" options set.");
+                                       "or \"proxy\" options set.");
         }
 
         members = actions[i].members;
@@ -1384,7 +1201,7 @@ nxt_conf_vldt_action(nxt_conf_validation_t *vldt, nxt_conf_value_t *value,
 
     if (members == NULL) {
         return nxt_conf_vldt_error(vldt, "The \"action\" object must have "
-                                   "either \"pass\", \"return\", \"share\", "
+                                   "either \"pass\", \"return\", "
                                    "or \"proxy\" option set.");
     }
 
@@ -1522,49 +1339,6 @@ nxt_conf_vldt_return(nxt_conf_validation_t *vldt, nxt_conf_value_t *value,
     if (status < NXT_HTTP_INVALID || status > NXT_HTTP_STATUS_MAX) {
         return nxt_conf_vldt_error(vldt, "The \"return\" value is out of "
                                    "allowed HTTP status code range 0-999.");
-    }
-
-    return NXT_OK;
-}
-
-
-static nxt_int_t
-nxt_conf_vldt_share(nxt_conf_validation_t *vldt, nxt_conf_value_t *value,
-    void *data)
-{
-    if (nxt_conf_type(value) == NXT_CONF_ARRAY) {
-        if (nxt_conf_array_elements_count(value) == 0) {
-            return nxt_conf_vldt_error(vldt, "The \"share\" array "
-                                       "must contain at least one element.");
-        }
-
-        return nxt_conf_vldt_array_iterator(vldt, value,
-                                            &nxt_conf_vldt_share_element);
-    }
-
-    /* NXT_CONF_STRING */
-
-    return nxt_conf_vldt_share_element(vldt, value);
-}
-
-
-static nxt_int_t
-nxt_conf_vldt_share_element(nxt_conf_validation_t *vldt,
-    nxt_conf_value_t *value)
-{
-    nxt_str_t  str;
-
-    static nxt_str_t  share = nxt_string("share");
-
-    if (nxt_conf_type(value) != NXT_CONF_STRING) {
-        return nxt_conf_vldt_error(vldt, "The \"share\" array must "
-                                   "contain only string values.");
-    }
-
-    nxt_conf_get_string(value, &str);
-
-    if (nxt_is_tstr(&str)) {
-        return nxt_conf_vldt_var(vldt, &share, &str);
     }
 
     return NXT_OK;
