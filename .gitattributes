@@ -1,4 +1,7 @@
 .hg*	export-ignore
 pkg/**	export-ignore
-docs/*.*	export-ignore
+docs/*.dtd	export-ignore
+docs/*.xml	export-ignore
+docs/*.xsls	export-ignore
+docs/*.xslt	export-ignore
 docs/Makefile	export-ignore

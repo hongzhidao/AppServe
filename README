@@ -29,6 +29,8 @@ See docs/migration.md for changes to executable names, packages, services,
 and default paths when migrating from Unit.  Existing language binding and
 libunit API names are retained for source compatibility.
 
+See docs/release-notes.md for the 0.1.0 release and its verification status.
+
 The upstream Unit documentation remains a reference for the inherited
 configuration API and application support:
 
