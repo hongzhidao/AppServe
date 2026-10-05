@@ -68,13 +68,10 @@ NXT_LIB_SRCS=" \
     src/nxt_conn_write.c \
     src/nxt_conn_close.c \
     src/nxt_event_conn_job_sendfile.c \
-    src/nxt_conn_proxy.c \
     src/nxt_job.c \
     src/nxt_job_resolve.c \
     src/nxt_sockaddr.c \
     src/nxt_listen_socket.c \
-    src/nxt_upstream.c \
-    src/nxt_upstream_round_robin.c \
     src/nxt_http_parse.c \
     src/nxt_app_log.c \
     src/nxt_capability.c \
@@ -94,8 +91,6 @@ NXT_LIB_SRCS=" \
     src/nxt_http_route.c \
     src/nxt_http_route_addr.c \
     src/nxt_http_return.c \
-    src/nxt_http_proxy.c \
-    src/nxt_http_chunk_parse.c \
     src/nxt_http_variables.c \
     src/nxt_application.c \
     src/nxt_external.c \
@@ -110,12 +105,6 @@ NXT_LIB_SRCS=" \
 NXT_LIB_SRC0=" \
     src/nxt_buf_filter.c \
     src/nxt_job_file.c \
-    src/nxt_stream_module.c \
-    src/nxt_stream_source.c \
-    src/nxt_upstream_source.c \
-    src/nxt_http_source.c \
-    src/nxt_fastcgi_source.c \
-    src/nxt_fastcgi_record_parse.c \
 \
     src/nxt_mem_pool_cleanup.h \
     src/nxt_mem_pool_cleanup.c \

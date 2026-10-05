@@ -19,8 +19,7 @@
 .Nm
 .Op Fl h | Fl Fl help | v | Fl Fl version
 .Sh DESCRIPTION
-AppServe is a polyglot app server, a reverse proxy, and a static file server
-for UNIX-like systems.
+AppServe is a polyglot app server for UNIX-like systems.
 It continues NGINX Unit, originally built by
 .Xr nginx 8
 team members from

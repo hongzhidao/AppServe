@@ -78,7 +78,7 @@ version-qualified types, must be removed from the configuration before upgrading
 The route action's `rewrite` option is removed starting with AppServe 0.2.0.
 Remove it from route actions and nested fallback actions before upgrading.
 Configurations containing this option are rejected as having an unknown
-parameter. Requests keep their original target throughout routing and proxying.
+parameter. Requests keep their original target throughout routing.
 
 The route action's `response_headers` option is also removed starting with
 AppServe 0.2.0. Remove it from route actions and nested fallback actions before
@@ -92,13 +92,22 @@ Built-in static file serving is removed starting with AppServe 0.2.0. Migrate
 routes using the `share` action to an application or front-end proxy before
 upgrading. The `share` action and its `types`, `chroot`, `follow_symlinks`,
 `traverse_mounts`, and `fallback` options are no longer supported. Route actions
-now support `pass`, `return`, or `proxy`.
+now support `pass` or `return`.
 
 Remove `settings/http/static`, including its `mime_types` configuration, before
 upgrading. Configurations containing these removed settings are rejected,
 including an empty `static` object. File extension mapping, index files,
 directory redirects, and static file ETags must be handled by the replacement
 file server.
+
+## Reverse proxying
+
+Built-in reverse proxying and upstream load balancing are removed starting
+with AppServe 0.2.0. Migrate route actions using `proxy` and listener or route
+`pass` values targeting `upstreams/...` to a front-end proxy before upgrading.
+Remove the top-level `upstreams` object, including an empty object, from the
+configuration. These configurations are rejected; route actions now support
+only `pass` to applications or routes and `return`.
 
 ## TLS compatibility
 

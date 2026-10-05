@@ -263,11 +263,21 @@ def test_variables_empty():
     update_pass("routes")
     assert client.get(url='/1')['status'] == 404
 
-    update_pass("upstreams")
+    update_pass("applications")
     assert client.get(url='/2')['status'] == 404
 
-    update_pass("applications")
-    assert client.get(url='/3')['status'] == 404
+@pytest.mark.parametrize('pass_value', ['upstreams/$method', '$arg_destination'])
+def test_variables_upstreams_unsupported(pass_value):
+    assert 'success' in client.conf(
+        {'pass': pass_value}, 'listeners/*:8080'
+    ), 'dynamic pass configure'
+
+    assert client.get(url='/?destination=upstreams/one')['status'] == 404
+
+    assert 'success' in client.conf(
+        {'pass': 'routes'}, 'listeners/*:8080'
+    ), 'restore route'
+    assert client.get()['status'] == 200, 'route still works'
 
 def test_variables_dynamic(wait_for_record):
     set_format('$header_foo$cookie_foo$arg_foo')

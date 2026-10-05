@@ -40,7 +40,7 @@ Requires: appserve == %%UNIT_VERSION%%-%%UNIT_RELEASE%%%{?dist}.appserve
 AppServe is a runtime and delivery environment for modern distributed
 applications. It runs the application code in multiple languages
 (PHP, Python, Go, etc.), and tightly couples it with traffic delivery
-in and out of the application. Take this application server and proxy
+in and out of the application. Take this application server
 directly in the cloud / container environments and fully control your app
 dynamically via an API.
 This package contains %%SUMMARY%%.

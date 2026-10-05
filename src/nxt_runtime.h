@@ -131,8 +131,6 @@ nxt_file_t *nxt_runtime_log_file_add(nxt_runtime_t *rt, nxt_str_t *name);
 void nxt_cdecl nxt_log_time_handler(nxt_uint_t level, nxt_log_t *log,
     const char *fmt, ...);
 
-void nxt_stream_connection_init(nxt_task_t *task, void *obj, void *data);
-
 nxt_int_t nxt_http_register_variables(void);
 #if (NXT_HAVE_NJS)
 void nxt_http_register_js_proto(nxt_js_conf_t *jcf);

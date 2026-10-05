@@ -210,7 +210,7 @@ def test_status_applications():
     check_application('restart', 0, 1, 0, 1)
     check_application('delayed', 0, 0, 0, 0)
 
-def test_status_proxy():
+def test_status_route_application():
     assert 'success' in client.conf(
         {
             "listeners": {
@@ -220,7 +220,7 @@ def test_status_proxy():
             "routes": [
                 {
                     "match": {"uri": "/"},
-                    "action": {"proxy": "http://127.0.0.1:8081"},
+                    "action": {"pass": "applications/empty"},
                 }
             ],
             "applications": {
@@ -232,5 +232,5 @@ def test_status_proxy():
     Status.init()
 
     assert client.get()['status'] == 200
-    check_connections(2, 0, 0, 2)
-    assert Status.get('/requests/total') == 2, 'proxy'
+    check_connections(1, 0, 0, 1)
+    assert Status.get('/requests/total') == 1, 'route application'

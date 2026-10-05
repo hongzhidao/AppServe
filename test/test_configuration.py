@@ -31,6 +31,23 @@ def test_http_static_unsupported(static):
     assert client.conf_get() == before, 'configuration unchanged'
     assert client.get()['status'] == 200, 'original route still works'
 
+@pytest.mark.parametrize(
+    'upstreams',
+    [{}, {'one': {'servers': {'127.0.0.1:8081': {'weight': 2}}}}],
+)
+@pytest.mark.parametrize('path', ['', 'upstreams'])
+def test_upstreams_unsupported(upstreams, path):
+    assert 'success' in try_addr('*:8080')
+    before = client.conf_get()
+
+    conf = {**before, 'upstreams': upstreams} if path == '' else upstreams
+    result = client.conf(conf, path)
+
+    assert 'error' in result, 'unsupported upstreams configuration'
+    assert result['detail'] == 'Unknown parameter "upstreams".'
+    assert client.conf_get() == before, 'configuration unchanged'
+    assert client.get()['status'] == 200, 'original route still works'
+
 def test_json_empty():
     assert 'error' in client.conf(''), 'empty'
 
