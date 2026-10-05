@@ -2573,7 +2573,7 @@ nxt_router_engines_create(nxt_task_t *task, nxt_router_t *router,
 
         recf->action = NXT_ROUTER_ENGINE_ADD;
 
-        recf->engine = nxt_event_engine_create(task, interface, NULL, 0, 0);
+        recf->engine = nxt_event_engine_create(task, interface, NULL, 0);
         if (nxt_slow_path(recf->engine == NULL)) {
             return NXT_ERROR;
         }
@@ -2921,9 +2921,6 @@ nxt_router_thread_start(void *data)
     engine->task.log = thread->log;
     thread->engine = engine;
     thread->task = &engine->task;
-#if 0
-    thread->fiber = &engine->fibers->fiber;
-#endif
 
     engine->mem_pool = nxt_mp_create(4096, 128, 1024, 64);
     if (nxt_slow_path(engine->mem_pool == NULL)) {

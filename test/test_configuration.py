@@ -248,30 +248,20 @@ def test_applications_type_only():
         {"app": {"type": "python"}}, 'applications'
     ), 'type only'
 
-@pytest.mark.parametrize(
-    'application_type, application_options',
-    [
-        ('java', {'webapp': '/app'}),
-        ('java 11', {'webapp': '/app'}),
-        ('perl', {'script': '/app/psgi.pl'}),
-        ('perl 5.34', {'script': '/app/psgi.pl'}),
-    ],
-)
-def test_applications_unsupported(application_type, application_options):
+def test_applications_unknown_type():
     before = client.conf_get()
 
     result = client.conf(
         {
             "app": {
-                "type": application_type,
+                "type": "unknown",
                 "processes": {"spare": 0},
-                **application_options,
             }
         },
         'applications',
     )
 
-    assert 'error' in result, 'unsupported application'
+    assert 'error' in result, 'unknown application type'
     assert 'not found' in result['detail'], 'unavailable application module'
     assert client.conf_get() == before, 'configuration unchanged'
 

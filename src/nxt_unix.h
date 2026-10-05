@@ -14,9 +14,6 @@
 #ifdef _FORTIFY_SOURCE
 /*
  * _FORTIFY_SOURCE
- *     may call sigaltstack() while _longjmp() checking;
- *     may cause _longjmp() to fail with message:
- *         "longjmp() causes uninitialized stack frame";
  *     does not allow to use "(void) write()";
  *     does surplus checks.
  */
@@ -153,7 +150,6 @@
 #include <poll.h>
 #include <pwd.h>
 #include <semaphore.h>
-#include <setjmp.h>
 #include <sched.h>
 #include <signal.h>
 #if (NXT_HAVE_POSIX_SPAWN)

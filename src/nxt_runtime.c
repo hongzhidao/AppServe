@@ -281,7 +281,7 @@ nxt_runtime_event_engines(nxt_task_t *task, nxt_runtime_t *rt)
     }
 
     engine = nxt_event_engine_create(task, interface,
-                                     nxt_main_process_signals, 0, 0);
+                                     nxt_main_process_signals, 0);
 
     if (nxt_slow_path(engine == NULL)) {
         return NXT_ERROR;
@@ -289,9 +289,6 @@ nxt_runtime_event_engines(nxt_task_t *task, nxt_runtime_t *rt)
 
     thread = task->thread;
     thread->engine = engine;
-#if 0
-    thread->fiber = &engine->fibers->fiber;
-#endif
 
     engine->id = rt->last_engine_id++;
     engine->mem_pool = nxt_mp_create(1024, 128, 256, 32);

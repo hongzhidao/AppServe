@@ -28,7 +28,6 @@ NXT_LIB_SRCS=" \
     src/nxt_queue.c \
     src/nxt_rbtree.c \
     src/nxt_mp.c \
-    src/nxt_mem_zone.c \
     src/nxt_string.c \
     src/nxt_utf8.c \
     src/nxt_parse.c \
@@ -39,10 +38,8 @@ NXT_LIB_SRCS=" \
     src/nxt_murmur_hash.c \
     src/nxt_lvlhsh.c \
     src/nxt_array.c \
-    src/nxt_vector.c \
     src/nxt_list.c \
     src/nxt_buf.c \
-    src/nxt_buf_pool.c \
     src/nxt_recvbuf.c \
     src/nxt_sendbuf.c \
     src/nxt_thread.c \
@@ -52,7 +49,6 @@ NXT_LIB_SRCS=" \
     src/nxt_semaphore.c \
     src/nxt_thread_pool.c \
     src/nxt_thread_time.c \
-    src/nxt_time_parse.c \
     src/nxt_work_queue.c \
     src/nxt_service.c \
     src/nxt_log_moderation.c \
@@ -65,9 +61,6 @@ NXT_LIB_SRCS=" \
     src/nxt_conn_read.c \
     src/nxt_conn_write.c \
     src/nxt_conn_close.c \
-    src/nxt_event_conn_job_sendfile.c \
-    src/nxt_job.c \
-    src/nxt_job_resolve.c \
     src/nxt_sockaddr.c \
     src/nxt_listen_socket.c \
     src/nxt_http_parse.c \
@@ -96,14 +89,6 @@ NXT_LIB_SRCS=" \
     src/nxt_websocket_accept.c \
     src/nxt_http_websocket.c \
     src/nxt_h1proto_websocket.c \
-"
-
-NXT_LIB_SRC0=" \
-    src/nxt_buf_filter.c \
-    src/nxt_job_file.c \
-\
-    src/nxt_mem_pool_cleanup.h \
-    src/nxt_mem_pool_cleanup.c \
 "
 
 NXT_LIB_UNIT_SRCS="src/nxt_unit.c"
@@ -136,10 +121,8 @@ NXT_TEST_SRCS=" \
     src/test/nxt_tests.c \
     src/test/nxt_rbtree1.c \
     src/test/nxt_rbtree_test.c \
-    src/test/nxt_term_parse_test.c \
     src/test/nxt_msec_diff_test.c \
     src/test/nxt_mp_test.c \
-    src/test/nxt_mem_zone_test.c \
     src/test/nxt_lvlhsh_test.c \
     src/test/nxt_gmtime_test.c \
     src/test/nxt_sprintf_test.c \

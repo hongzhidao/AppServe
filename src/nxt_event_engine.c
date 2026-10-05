@@ -41,7 +41,7 @@ static nxt_work_handler_t nxt_event_engine_queue_pop(nxt_event_engine_t *engine,
 nxt_event_engine_t *
 nxt_event_engine_create(nxt_task_t *task,
     const nxt_event_interface_t *interface, const nxt_sig_event_t *signals,
-    nxt_uint_t flags, nxt_uint_t batch)
+    nxt_uint_t batch)
 {
     nxt_uint_t          events;
     nxt_thread_t        *thread;
@@ -61,15 +61,6 @@ nxt_event_engine_create(nxt_task_t *task,
     engine->task.ident = nxt_task_next_ident();
 
     engine->batch = batch;
-
-#if 0
-    if (flags & NXT_ENGINE_FIBERS) {
-        engine->fibers = nxt_fiber_main_create(engine);
-        if (engine->fibers == NULL) {
-            goto fibers_fail;
-        }
-    }
-#endif
 
     engine->current_work_queue = &engine->fast_work_queue;
 
@@ -152,11 +143,6 @@ signals_fail:
 
     nxt_free(engine->signals);
     nxt_work_queue_cache_destroy(&engine->work_queue_cache);
-    nxt_free(engine->fibers);
-
-#if 0
-fibers_fail:
-#endif
 
     nxt_free(engine);
 
@@ -515,16 +501,6 @@ nxt_event_engine_start(nxt_event_engine_t *engine)
     nxt_work_handler_t  handler;
 
     thr = nxt_thread();
-
-    if (engine->fibers) {
-        /*
-         * _setjmp() cannot be wrapped in a function since return from
-         * the function clobbers stack used by future _setjmp() returns.
-         */
-        _setjmp(engine->fibers->fiber.jmp);
-
-        /* A return point from fibers. */
-    }
 
     thr->log = engine->task.log;
 

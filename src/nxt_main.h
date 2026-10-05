@@ -55,7 +55,6 @@ typedef uint16_t                     nxt_port_id_t;
 #include <nxt_thread_time.h>
 #include <nxt_rbtree.h>
 #include <nxt_timer.h>
-#include <nxt_fiber.h>
 #include <nxt_thread.h>
 #include <nxt_process_type.h>
 #include <nxt_capability.h>
@@ -80,32 +79,19 @@ typedef struct nxt_sockaddr_s           nxt_sockaddr_t;
 #include <nxt_dyld.h>
 
 
-typedef void *(*nxt_mem_proto_alloc_t)(void *pool, size_t size);
-typedef void (*nxt_mem_proto_free_t)(void *pool, void *p);
-
-typedef struct {
-    nxt_mem_proto_alloc_t  alloc;
-    nxt_mem_proto_free_t   free;
-} nxt_mem_proto_t;
-
-
-#include <nxt_mem_zone.h>
 #include <nxt_signal.h>
 #include <nxt_semaphore.h>
 
 #include <nxt_djb_hash.h>
 #include <nxt_murmur_hash.h>
-#include <nxt_hash.h>
 
 #include <nxt_sort.h>
-#include <nxt_vector.h>
 #include <nxt_list.h>
 
 #include <nxt_service.h>
 
 typedef struct nxt_buf_s                nxt_buf_t;
 #include <nxt_buf.h>
-#include <nxt_buf_pool.h>
 #include <nxt_recvbuf.h>
 
 typedef struct nxt_conn_s               nxt_conn_t;
@@ -137,14 +123,7 @@ typedef void (*nxt_event_conn_handler_t)(nxt_thread_t *thr, nxt_conn_t *c);
 #include <nxt_conn.h>
 #include <nxt_event_engine.h>
 
-#include <nxt_job.h>
-#include <nxt_job_file.h>
-#include <nxt_buf_filter.h>
-
-#include <nxt_job_resolve.h>
 #include <nxt_sockaddr.h>
-
-#include <nxt_cache.h>
 
 #include <nxt_http_parse.h>
 #include <nxt_runtime.h>
