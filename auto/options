@@ -21,13 +21,6 @@ NXT_TEST_BUILD_EVENTPORT=NO
 NXT_TEST_BUILD_DEVPOLL=NO
 NXT_TEST_BUILD_POLLSET=NO
 
-NXT_TEST_BUILD_FREEBSD_SENDFILE=NO
-NXT_TEST_BUILD_LINUX_SENDFILE=NO
-NXT_TEST_BUILD_MACOSX_SENDFILE=NO
-NXT_TEST_BUILD_SOLARIS_SENDFILEV=NO
-NXT_TEST_BUILD_AIX_SEND_FILE=NO
-NXT_TEST_BUILD_HPUX_SENDFILE=NO
-
 NXT_TESTS=NO
 
 for nxt_option
@@ -70,13 +63,6 @@ do
         --test-build-eventport)          NXT_TEST_BUILD_EVENTPORT=YES        ;;
         --test-build-devpoll)            NXT_TEST_BUILD_DEVPOLL=YES          ;;
         --test-build-pollset)            NXT_TEST_BUILD_POLLSET=YES          ;;
-
-        --test-build-freebsd-sendfile)   NXT_TEST_BUILD_FREEBSD_SENDFILE=YES ;;
-        --test-build-linux-sendfile)     NXT_TEST_BUILD_LINUX_SENDFILE=YES   ;;
-        --test-build-solaris-sendfilev)  NXT_TEST_BUILD_SOLARIS_SENDFILEV=YES ;;
-        --test-build-macosx-sendfile)    NXT_TEST_BUILD_MACOSX_SENDFILE=YES  ;;
-        --test-build-aix-send_file)      NXT_TEST_BUILD_AIX_SEND_FILE=YES    ;;
-        --test-build-hpux-sendfile)      NXT_TEST_BUILD_HPUX_SENDFILE=YES    ;;
 
         --tests)                         NXT_TESTS=YES                       ;;
 

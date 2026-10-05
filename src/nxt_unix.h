@@ -218,14 +218,6 @@
 #include <sys/pollset.h>
 #endif
 
-#if (NXT_HAVE_LINUX_SENDFILE)
-#include <sys/sendfile.h>
-#endif
-
-#if (NXT_HAVE_SOLARIS_SENDFILEV)
-#include <sys/sendfile.h>
-#endif
-
 #if (NXT_HAVE_GETRANDOM)
 #include <sys/random.h>             /* getrandom(). */
 #elif (NXT_HAVE_LINUX_SYS_GETRANDOM)

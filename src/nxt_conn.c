@@ -17,25 +17,6 @@ nxt_conn_io_t  nxt_unix_conn_io = {
 
     .write = nxt_conn_io_write,
     .sendbuf = nxt_conn_io_sendbuf,
-
-#if (NXT_HAVE_LINUX_SENDFILE)
-    .old_sendbuf = nxt_linux_event_conn_io_sendfile,
-#elif (NXT_HAVE_FREEBSD_SENDFILE)
-    .old_sendbuf = nxt_freebsd_event_conn_io_sendfile,
-#elif (NXT_HAVE_MACOSX_SENDFILE)
-    .old_sendbuf = nxt_macosx_event_conn_io_sendfile,
-#elif (NXT_HAVE_SOLARIS_SENDFILEV)
-    .old_sendbuf = nxt_solaris_event_conn_io_sendfilev,
-#elif (NXT_HAVE_AIX_SEND_FILE)
-    .old_sendbuf = nxt_aix_event_conn_io_send_file,
-#elif (NXT_HAVE_HPUX_SENDFILE)
-    .old_sendbuf = nxt_hpux_event_conn_io_sendfile,
-#else
-    .old_sendbuf = nxt_event_conn_io_sendbuf,
-#endif
-
-    .writev = nxt_event_conn_io_writev,
-    .send = nxt_event_conn_io_send,
 };
 
 
@@ -74,8 +55,6 @@ nxt_conn_create(nxt_mp_t *mp, nxt_task_t *task)
     c->write_timer.task = &c->task;
 
     c->io = thr->engine->event.io;
-    c->max_chunk = NXT_INT32_T_MAX;
-    c->sendfile = NXT_CONN_SENDFILE_UNSET;
 
     c->socket.read_work_queue = &thr->engine->fast_work_queue;
     c->socket.write_work_queue = &thr->engine->fast_work_queue;

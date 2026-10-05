@@ -90,17 +90,6 @@ nxt_conn_socket(nxt_task_t *task, nxt_conn_t *c)
         return NXT_ERROR;
     }
 
-    c->sendfile = 1;
-
-#if (NXT_HAVE_UNIX_DOMAIN && NXT_SOLARIS)
-
-    if (family == AF_UNIX) {
-        /* Solaris AF_UNIX does not support sendfilev(). */
-        c->sendfile = 0;
-    }
-
-#endif
-
     c->socket.fd = s;
 
     c->socket.task = task;

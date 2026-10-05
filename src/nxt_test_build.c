@@ -130,24 +130,3 @@ pollset_poll(pollset_t ps, struct pollfd *polldata_array, int array_length,
 }
 
 #endif
-
-
-#if (NXT_TEST_BUILD_SOLARIS_SENDFILEV)
-
-ssize_t sendfilev(int fd, const struct sendfilevec *vec,
-    int sfvcnt, size_t *xferred)
-{
-    return -1;
-}
-
-#endif
-
-
-#if (NXT_TEST_BUILD_AIX_SEND_FILE)
-
-ssize_t send_file(int *s, struct sf_parms *sf_iobuf, uint_t flags)
-{
-    return -1;
-}
-
-#endif

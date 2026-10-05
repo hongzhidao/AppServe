@@ -102,12 +102,6 @@ NXT_LIB_POLLSET_SRCS="src/nxt_pollset_engine.c"
 NXT_LIB_POLL_SRCS="src/nxt_poll_engine.c"
 NXT_LIB_SELECT_SRCS="src/nxt_select_engine.c"
 
-NXT_LIB_LINUX_SENDFILE_SRCS="src/nxt_linux_sendfile.c"
-NXT_LIB_FREEBSD_SENDFILE_SRCS="src/nxt_freebsd_sendfile.c"
-NXT_LIB_SOLARIS_SENDFILEV_SRCS="src/nxt_solaris_sendfilev.c"
-NXT_LIB_MACOSX_SENDFILE_SRCS="src/nxt_macosx_sendfile.c"
-NXT_LIB_AIX_SEND_FILE_SRCS="src/nxt_aix_send_file.c"
-NXT_LIB_HPUX_SENDFILE_SRCS="src/nxt_hpux_sendfile.c"
 NXT_LIB_CLONE_SRCS="src/nxt_clone.c"
 
 NXT_TEST_BUILD_DEPS="src/nxt_test_build.h"
@@ -179,44 +173,6 @@ fi
 
 NXT_LIB_SRCS="$NXT_LIB_SRCS $NXT_LIB_POLL_SRCS"
 NXT_LIB_SRCS="$NXT_LIB_SRCS $NXT_LIB_SELECT_SRCS"
-
-
-if [ "$NXT_HAVE_LINUX_SENDFILE" = "YES" \
-     -o "$NXT_TEST_BUILD_LINUX_SENDFILE" = "YES" ]; then
-    NXT_LIB_SRCS="$NXT_LIB_SRCS $NXT_LIB_LINUX_SENDFILE_SRCS"
-fi
-
-
-if [ "$NXT_HAVE_FREEBSD_SENDFILE" = "YES" \
-     -o "$NXT_TEST_BUILD_FREEBSD_SENDFILE" = "YES" ]; then
-    NXT_LIB_SRCS="$NXT_LIB_SRCS $NXT_LIB_FREEBSD_SENDFILE_SRCS"
-fi
-
-
-if [ "$NXT_HAVE_SOLARIS_SENDFILEV" = "YES" \
-     -o "$NXT_TEST_BUILD_SOLARIS_SENDFILEV" = "YES" ];
-then
-    NXT_LIB_SRCS="$NXT_LIB_SRCS $NXT_LIB_SOLARIS_SENDFILEV_SRCS"
-fi
-
-
-if [ "$NXT_HAVE_MACOSX_SENDFILE" = "YES" \
-     -o "$NXT_TEST_BUILD_MACOSX_SENDFILE" = "YES" ]; then
-    NXT_LIB_SRCS="$NXT_LIB_SRCS $NXT_LIB_MACOSX_SENDFILE_SRCS"
-fi
-
-
-if [ "$NXT_HAVE_AIX_SEND_FILE" = "YES" \
-     -o "$NXT_TEST_BUILD_AIX_SEND_FILE" = "YES" ];
-then
-    NXT_LIB_SRCS="$NXT_LIB_SRCS $NXT_LIB_AIX_SEND_FILE_SRCS"
-fi
-
-
-if [ "$NXT_HAVE_HPUX_SENDFILE" = "YES" \
-     -o "$NXT_TEST_BUILD_HPUX_SENDFILE" = "YES" ]; then
-    NXT_LIB_SRCS="$NXT_LIB_SRCS $NXT_LIB_HPUX_SENDFILE_SRCS"
-fi
 
 
 if [ "$NXT_HAVE_CLONE" = "YES" ]; then

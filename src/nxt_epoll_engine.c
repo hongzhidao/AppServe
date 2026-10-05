@@ -106,15 +106,6 @@ static nxt_conn_io_t  nxt_epoll_edge_conn_io = {
 
     .write = nxt_conn_io_write,
     .sendbuf = nxt_conn_io_sendbuf,
-
-#if (NXT_HAVE_LINUX_SENDFILE)
-    .old_sendbuf = nxt_linux_event_conn_io_sendfile,
-#else
-    .old_sendbuf = nxt_event_conn_io_sendbuf,
-#endif
-
-    .writev = nxt_event_conn_io_writev,
-    .send = nxt_event_conn_io_send,
 };
 
 

@@ -158,53 +158,6 @@ done:
 }
 
 
-size_t
-nxt_sendbuf_file_coalesce(nxt_sendbuf_coalesce_t *sb)
-{
-    size_t     file_start, total;
-    nxt_fd_t   fd;
-    nxt_off_t  size, last;
-    nxt_buf_t  *b;
-
-    b = sb->buf;
-    fd = b->file->fd;
-
-    total = sb->size;
-
-    for ( ;; ) {
-
-        nxt_prefetch(b->next);
-
-        size = b->file_end - b->file_pos;
-
-        if (total + size >= sb->limit) {
-            total = sb->limit;
-            break;
-        }
-
-        total += size;
-        last = b->file_pos + size;
-
-        b = b->next;
-
-        if (b == NULL || !nxt_buf_is_file(b)) {
-            break;
-        }
-
-        if (b->file_pos != last || b->file->fd != fd) {
-            break;
-        }
-    }
-
-    sb->buf = b;
-
-    file_start = sb->size;
-    sb->size = total;
-
-    return total - file_start;
-}
-
-
 nxt_buf_t *
 nxt_sendbuf_update(nxt_buf_t *b, size_t sent)
 {

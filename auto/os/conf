@@ -96,7 +96,7 @@ case "$NXT_SYSTEM" in
         NXT_SHARED_LOCAL_EXEC_LINK=
 
         NXT_LIBM="-lm"
-        NXT_LIBS="-lsocket $NXT_LIBSENDFILE"
+        NXT_LIBS="-lsocket"
         NXT_LIBS="$NXT_LIBS $NXT_LIBRT $NXT_LIBDL $NXT_PTHREAD"
     ;;
 

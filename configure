@@ -121,7 +121,6 @@ NXT_LIBRT=
 . auto/threads
 . auto/events
 . auto/sockets
-. auto/sendfile
 . auto/files
 . auto/unix
 . auto/os/conf

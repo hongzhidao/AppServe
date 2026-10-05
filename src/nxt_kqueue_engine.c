@@ -120,17 +120,6 @@ static nxt_conn_io_t  nxt_kqueue_conn_io = {
 
     .write = nxt_conn_io_write,
     .sendbuf = nxt_conn_io_sendbuf,
-
-#if (NXT_HAVE_FREEBSD_SENDFILE)
-    .old_sendbuf = nxt_freebsd_event_conn_io_sendfile,
-#elif (NXT_HAVE_MACOSX_SENDFILE)
-    .old_sendbuf = nxt_macosx_event_conn_io_sendfile,
-#else
-    .old_sendbuf = nxt_event_conn_io_sendbuf,
-#endif
-
-    .writev = nxt_event_conn_io_writev,
-    .send = nxt_event_conn_io_send,
 };
 
 
