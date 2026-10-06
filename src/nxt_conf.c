@@ -572,20 +572,7 @@ nxt_conf_map_object(nxt_mp_t *mp, nxt_conf_value_t *value, nxt_conf_map_t *map,
     nxt_str_t         str, *s;
     nxt_uint_t        i;
     nxt_conf_value_t  *v;
-
-    union {
-        uint8_t     ui8;
-        int32_t     i32;
-        int64_t     i64;
-        int         i;
-        ssize_t     size;
-        off_t       off;
-        nxt_msec_t  msec;
-        double      dbl;
-        nxt_str_t   str;
-        char        *cstrz;
-        void        *v;
-    } *ptr;
+    void              *ptr;
 
     for (i = 0; i < n; i++) {
 
@@ -602,7 +589,7 @@ nxt_conf_map_object(nxt_mp_t *mp, nxt_conf_value_t *value, nxt_conf_map_t *map,
         case NXT_CONF_MAP_INT8:
 
             if (v->type == NXT_CONF_VALUE_BOOLEAN) {
-                ptr->ui8 = v->u.boolean;
+                *(uint8_t *) ptr = v->u.boolean;
             }
 
             break;
@@ -623,27 +610,27 @@ nxt_conf_map_object(nxt_mp_t *mp, nxt_conf_value_t *value, nxt_conf_map_t *map,
             switch (map[i].type) {
 
             case NXT_CONF_MAP_INT32:
-                ptr->i32 = num;
+                *(int32_t *) ptr = num;
                 break;
 
             case NXT_CONF_MAP_INT64:
-                ptr->i64 = num;
+                *(int64_t *) ptr = num;
                 break;
 
             case NXT_CONF_MAP_INT:
-                ptr->i = num;
+                *(int *) ptr = num;
                 break;
 
             case NXT_CONF_MAP_SIZE:
-                ptr->size = num;
+                *(ssize_t *) ptr = num;
                 break;
 
             case NXT_CONF_MAP_OFF:
-                ptr->off = num;
+                *(off_t *) ptr = num;
                 break;
 
             case NXT_CONF_MAP_MSEC:
-                ptr->msec = (nxt_msec_t) num * 1000;
+                *(nxt_msec_t *) ptr = (nxt_msec_t) num * 1000;
                 break;
 
             default:
@@ -655,7 +642,7 @@ nxt_conf_map_object(nxt_mp_t *mp, nxt_conf_value_t *value, nxt_conf_map_t *map,
         case NXT_CONF_MAP_DOUBLE:
 
             if (v->type == NXT_CONF_VALUE_NUMBER) {
-                ptr->dbl = nxt_strtod(v->u.number, NULL);
+                *(double *) ptr = nxt_strtod(v->u.number, NULL);
             }
 
             break;
@@ -675,12 +662,12 @@ nxt_conf_map_object(nxt_mp_t *mp, nxt_conf_value_t *value, nxt_conf_map_t *map,
             switch (map[i].type) {
 
             case NXT_CONF_MAP_STR:
-                ptr->str = str;
+                *(nxt_str_t *) ptr = str;
                 break;
 
             case NXT_CONF_MAP_STR_COPY:
 
-                s = nxt_str_dup(mp, &ptr->str, &str);
+                s = nxt_str_dup(mp, ptr, &str);
 
                 if (nxt_slow_path(s == NULL)) {
                     return NXT_ERROR;
@@ -690,9 +677,9 @@ nxt_conf_map_object(nxt_mp_t *mp, nxt_conf_value_t *value, nxt_conf_map_t *map,
 
             case NXT_CONF_MAP_CSTRZ:
 
-                ptr->cstrz = nxt_str_cstrz(mp, &str);
+                *(char **) ptr = nxt_str_cstrz(mp, &str);
 
-                if (nxt_slow_path(ptr->cstrz == NULL)) {
+                if (nxt_slow_path(*(char **) ptr == NULL)) {
                     return NXT_ERROR;
                 }
 
@@ -706,7 +693,7 @@ nxt_conf_map_object(nxt_mp_t *mp, nxt_conf_value_t *value, nxt_conf_map_t *map,
 
         case NXT_CONF_MAP_PTR:
 
-            ptr->v = v;
+            *(void **) ptr = v;
 
             break;
         }

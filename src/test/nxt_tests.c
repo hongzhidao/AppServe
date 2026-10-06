@@ -39,6 +39,12 @@ main(int argc, char **argv)
     thr->task = &task;
 
     if (nxt_process_argv[1] != NULL
+        && strcmp(nxt_process_argv[1], "conf_map") == 0)
+    {
+        return nxt_conf_map_test(thr) != NXT_OK;
+    }
+
+    if (nxt_process_argv[1] != NULL
         && strcmp(nxt_process_argv[1], "forwarded") == 0)
     {
         return nxt_http_forwarded_test(thr) != NXT_OK;
@@ -77,6 +83,10 @@ main(int argc, char **argv)
 #endif
 
     if (nxt_random_test(thr) != NXT_OK) {
+        return 1;
+    }
+
+    if (nxt_conf_map_test(thr) != NXT_OK) {
         return 1;
     }
 
