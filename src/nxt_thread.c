@@ -7,8 +7,14 @@
 #include <nxt_main.h>
 
 
+typedef struct {
+    nxt_thread_t       *thread;
+    nxt_thread_link_t  *link;
+} nxt_thread_cleanup_t;
+
+
 static void *nxt_thread_trampoline(void *data);
-static void nxt_thread_time_cleanup(void *data);
+static void nxt_thread_cleanup(void *data);
 
 
 #if (NXT_HAVE_PTHREAD_SPECIFIC_DATA)
@@ -101,39 +107,27 @@ nxt_thread_create(nxt_thread_handle_t *handle, nxt_thread_link_t *link)
 static void *
 nxt_thread_trampoline(void *data)
 {
-    nxt_thread_t        *thr;
-    nxt_thread_link_t   *link;
-    nxt_thread_start_t  start;
+    nxt_thread_t          *thr;
+    nxt_thread_link_t     *link;
+    nxt_thread_cleanup_t  cleanup;
 
     link = data;
 
+    cleanup.thread = NULL;
+    cleanup.link = link;
+
+    pthread_cleanup_push(nxt_thread_cleanup, &cleanup);
+
     thr = nxt_thread_init();
+    thr->link = link;
+    cleanup.thread = thr;
 
     nxt_log_debug(thr->log, "thread trampoline: %PH", thr->handle);
 
-    pthread_cleanup_push(nxt_thread_time_cleanup, thr);
+    link->start(link);
 
-    start = link->start;
-    data = link->work.data;
+    pthread_cleanup_pop(1);
 
-    if (link->work.handler != NULL) {
-        thr->link = link;
-
-    } else {
-        nxt_free(link);
-    }
-
-    start(data);
-
-    /*
-     * nxt_thread_time_cleanup() should be called only if a thread
-     * would be canceled, so ignore it here because nxt_thread_exit()
-     * calls nxt_thread_time_free() as well.
-     */
-    pthread_cleanup_pop(0);
-
-    nxt_thread_exit(thr);
-    nxt_unreachable();
     return NULL;
 }
 
@@ -167,42 +161,51 @@ nxt_thread_init(void)
 
 
 static void
-nxt_thread_time_cleanup(void *data)
+nxt_thread_cleanup(void *data)
 {
-    nxt_thread_t  *thr;
+    nxt_thread_t          *thr;
+    nxt_thread_link_t     *link;
+    nxt_event_engine_t    *engine;
+    nxt_thread_cleanup_t  *cleanup;
 
-    thr = data;
+    /* A pending cancellation must not interrupt normal-return cleanup. */
+    (void) pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 
-    nxt_log_debug(thr->log, "thread time cleanup");
+    cleanup = data;
+    thr = cleanup->thread;
+    link = cleanup->link;
 
-    nxt_thread_time_free(thr);
+    if (thr != NULL) {
+        thr->link = NULL;
+        nxt_thread_time_free(thr);
+    }
+
+    if (link->work.handler != NULL) {
+        /*
+         * link->work.handler is already set to an exit handler,
+         * and link->work.task is already set to the correct engine->task.
+         * The link should be freed by the exit handler.
+         */
+        link->work.obj = (void *) (uintptr_t) nxt_thread_handle();
+        engine = nxt_container_of(link->work.task, nxt_event_engine_t, task);
+
+        nxt_event_engine_post(engine, &link->work);
+
+    } else {
+        nxt_free(link);
+    }
 }
 
 
 void
 nxt_thread_exit(nxt_thread_t *thr)
 {
-    nxt_thread_link_t   *link;
-    nxt_event_engine_t  *engine;
-
     nxt_log_debug(thr->log, "thread exit");
 
-    link = thr->link;
-    thr->link = NULL;
-
-    if (link != NULL) {
-        /*
-         * link->work.handler is already set to an exit handler,
-         * and link->work.task is already set to the correct engine->task.
-         * The link should be freed by the exit handler.
-         */
-        link->work.obj = (void *) (uintptr_t) thr->handle;
-        engine = nxt_container_of(link->work.task, nxt_event_engine_t, task);
-
-        nxt_event_engine_post(engine, &link->work);
+    /* Managed threads release their resources in the trampoline cleanup. */
+    if (thr->link == NULL) {
+        nxt_thread_time_free(thr);
     }
-
-    nxt_thread_time_free(thr);
 
     pthread_exit(NULL);
     nxt_unreachable();

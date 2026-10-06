@@ -84,13 +84,16 @@ nxt_thread_get_data(tsd)                                                      \
 #endif
 
 
-typedef void (*nxt_thread_start_t)(void *data);
+typedef struct nxt_thread_link_s  nxt_thread_link_t;
 
-typedef struct {
+typedef void (*nxt_thread_start_t)(nxt_thread_link_t *link);
+
+/* Thread cleanup frees this link unless work.handler takes ownership. */
+struct nxt_thread_link_s {
     nxt_thread_start_t       start;
     nxt_event_engine_t       *engine;
     nxt_work_t               work;
-} nxt_thread_link_t;
+};
 
 
 NXT_EXPORT nxt_int_t nxt_thread_create(nxt_thread_handle_t *handle,

@@ -30,7 +30,7 @@
  */
 
 
-static void nxt_time_thread(void *data);
+static void nxt_time_thread(nxt_thread_link_t *link);
 static void nxt_thread_time_shared(nxt_monotonic_time_t *now);
 static void nxt_thread_realtime_update(nxt_thread_t *thr,
     nxt_monotonic_time_t *now);
@@ -97,13 +97,13 @@ nxt_time_thread_start(nxt_msec_t interval)
 
 
 static void
-nxt_time_thread(void *data)
+nxt_time_thread(nxt_thread_link_t *link)
 {
     nxt_nsec_t            interval, rest;
     nxt_thread_t          *thr;
     nxt_monotonic_time_t  now;
 
-    interval = (uintptr_t) data;
+    interval = (uintptr_t) link->work.data;
     interval *= 1000000;
 
     thr = nxt_thread();

@@ -119,6 +119,7 @@ NXT_TEST_SRCS=" \
     src/test/nxt_mp_test.c \
     src/test/nxt_lvlhsh_test.c \
     src/test/nxt_gmtime_test.c \
+    src/test/nxt_thread_test.c \
     src/test/nxt_sprintf_test.c \
     src/test/nxt_malloc_test.c \
     src/test/nxt_utf8_test.c \

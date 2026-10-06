@@ -23,7 +23,7 @@
 
 
 static nxt_int_t nxt_signal_action(int signo, void (*handler)(int));
-static void nxt_signal_thread(void *data);
+static void nxt_signal_thread(nxt_thread_link_t *link);
 
 
 nxt_event_signals_t *
@@ -137,7 +137,7 @@ nxt_signal_thread_start(nxt_event_engine_t *engine)
 
     if (nxt_fast_path(link != NULL)) {
         link->start = nxt_signal_thread;
-        link->work.data = engine;
+        link->engine = engine;
 
         if (nxt_thread_create(&engine->signals->thread, link) == NXT_OK) {
             engine->signals->process = nxt_pid;
@@ -150,14 +150,14 @@ nxt_signal_thread_start(nxt_event_engine_t *engine)
 
 
 static void
-nxt_signal_thread(void *data)
+nxt_signal_thread(nxt_thread_link_t *link)
 {
     int                 signo;
     nxt_err_t           err;
     nxt_thread_t        *thr;
     nxt_event_engine_t  *engine;
 
-    engine = data;
+    engine = link->engine;
 
     thr = nxt_thread();
 

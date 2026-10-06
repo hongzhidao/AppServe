@@ -11,7 +11,9 @@
 #define NXT_NCQ_TEST          1
 #endif
 
+#ifndef NXT_QTEST_USE_THREAD
 #define NXT_QTEST_USE_THREAD  0
+#endif
 
 #if NXT_NCQ_TEST
 #include <nxt_nncq.h>
@@ -122,6 +124,7 @@ typedef struct {
     uint64_t             faa;
 
 #if NXT_QTEST_USE_THREAD
+    void                 (*start)(void *data);
     nxt_thread_handle_t  handle;
 #else
     nxt_pid_t            pid;
@@ -292,8 +295,22 @@ wdeq_worker(void *p)
 }
 
 
+#if NXT_QTEST_USE_THREAD
+
+static void
+worker_start(nxt_thread_link_t *link)
+{
+    nxt_worker_info_t  *wi;
+
+    wi = link->work.data;
+    wi->start(wi);
+}
+
+#endif
+
+
 static nxt_int_t
-worker_create(nxt_worker_info_t *wi, int id, nxt_thread_start_t start)
+worker_create(nxt_worker_info_t *wi, int id, void (*start)(void *data))
 {
     wi->id = id;
 
@@ -301,8 +318,13 @@ worker_create(nxt_worker_info_t *wi, int id, nxt_thread_start_t start)
     nxt_thread_link_t  *link;
 
     link = nxt_zalloc(sizeof(nxt_thread_link_t));
+    if (link == NULL) {
+        return NXT_ERROR;
+    }
 
-    link->start = start;
+    wi->start = start;
+
+    link->start = worker_start;
     link->work.data = wi;
 
     return nxt_thread_create(&wi->handle, link);

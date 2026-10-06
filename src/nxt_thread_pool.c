@@ -9,8 +9,8 @@
 
 static nxt_int_t nxt_thread_pool_init(nxt_thread_pool_t *tp);
 static void nxt_thread_pool_exit(nxt_task_t *task, void *obj, void *data);
-static void nxt_thread_pool_start(void *ctx);
-static void nxt_thread_pool_loop(void *ctx);
+static void nxt_thread_pool_start(nxt_thread_link_t *link);
+static void nxt_thread_pool_loop(nxt_thread_link_t *link);
 static void nxt_thread_pool_wait(nxt_thread_pool_t *tp);
 
 
@@ -112,23 +112,23 @@ done:
 
 
 static void
-nxt_thread_pool_start(void *ctx)
+nxt_thread_pool_start(nxt_thread_link_t *link)
 {
     nxt_thread_t       *thr;
     nxt_thread_pool_t  *tp;
 
-    tp = ctx;
+    tp = link->work.data;
     thr = nxt_thread();
 
     tp->main = thr->handle;
     tp->task.thread = thr;
 
-    nxt_thread_pool_loop(ctx);
+    nxt_thread_pool_loop(link);
 }
 
 
 static void
-nxt_thread_pool_loop(void *ctx)
+nxt_thread_pool_loop(nxt_thread_link_t *link)
 {
     void                *obj, *data;
     nxt_task_t          *task;
@@ -136,7 +136,7 @@ nxt_thread_pool_loop(void *ctx)
     nxt_thread_pool_t   *tp;
     nxt_work_handler_t  handler;
 
-    tp = ctx;
+    tp = link->work.data;
     thr = nxt_thread();
 
     if (tp->init != NULL) {

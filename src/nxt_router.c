@@ -149,7 +149,7 @@ static void nxt_router_engines_post(nxt_router_t *router,
 static void nxt_router_engine_post(nxt_event_engine_t *engine,
     nxt_work_t *jobs);
 
-static void nxt_router_thread_start(void *data);
+static void nxt_router_thread_start(nxt_thread_link_t *link);
 static void nxt_router_rt_add_port(nxt_task_t *task, void *obj,
     void *data);
 static void nxt_router_listen_socket_create(nxt_task_t *task, void *obj,
@@ -2849,17 +2849,15 @@ static nxt_port_handlers_t  nxt_router_app_port_handlers = {
 
 
 static void
-nxt_router_thread_start(void *data)
+nxt_router_thread_start(nxt_thread_link_t *link)
 {
     nxt_int_t           ret;
     nxt_port_t          *port;
     nxt_task_t          *task;
     nxt_work_t          *work;
     nxt_thread_t        *thread;
-    nxt_thread_link_t   *link;
     nxt_event_engine_t  *engine;
 
-    link = data;
     engine = link->engine;
     task = &engine->task;
 

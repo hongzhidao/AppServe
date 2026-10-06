@@ -62,6 +62,12 @@ main(int argc, char **argv)
         return nxt_http_forwarded_test(thr) != NXT_OK;
     }
 
+    if (nxt_process_argv[1] != NULL
+        && strcmp(nxt_process_argv[1], "thread") == 0)
+    {
+        return nxt_thread_test(thr) != NXT_OK;
+    }
+
 #if (NXT_TEST_RTDTSC)
 
     if (nxt_process_argv[1] != NULL
@@ -93,6 +99,10 @@ main(int argc, char **argv)
     }
 
 #endif
+
+    if (nxt_thread_test(thr) != NXT_OK) {
+        return 1;
+    }
 
     if (nxt_random_test(thr) != NXT_OK) {
         return 1;

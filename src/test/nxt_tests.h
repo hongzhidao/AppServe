@@ -56,6 +56,7 @@ nxt_int_t nxt_lvlhsh_test(nxt_thread_t *thr, nxt_uint_t n,
     nxt_bool_t use_pool);
 
 nxt_int_t nxt_gmtime_test(nxt_thread_t *thr);
+nxt_int_t nxt_thread_test(nxt_thread_t *thr);
 nxt_int_t nxt_sprintf_test(nxt_thread_t *thr);
 nxt_int_t nxt_malloc_test(nxt_thread_t *thr);
 nxt_int_t nxt_utf8_test(nxt_thread_t *thr);
