@@ -62,6 +62,7 @@ nxt_int_t nxt_utf8_test(nxt_thread_t *thr);
 nxt_int_t nxt_http_parse_test(nxt_thread_t *thr);
 nxt_int_t nxt_http_forwarded_test(nxt_thread_t *thr);
 nxt_int_t nxt_conf_map_test(nxt_thread_t *thr);
+nxt_int_t nxt_murmur_hash_test(nxt_thread_t *thr, nxt_bool_t fixed);
 nxt_int_t nxt_strverscmp_test(nxt_thread_t *thr);
 nxt_int_t nxt_base64_test(nxt_thread_t *thr);
 nxt_int_t nxt_clone_creds_test(nxt_thread_t *thr);

@@ -126,6 +126,7 @@ NXT_TEST_SRCS=" \
     src/test/nxt_http_parse_test.c \
     src/test/nxt_http_forwarded_test.c \
     src/test/nxt_conf_map_test.c \
+    src/test/nxt_murmur_hash_test.c \
     src/test/nxt_strverscmp_test.c \
     src/test/nxt_base64_test.c \
 "

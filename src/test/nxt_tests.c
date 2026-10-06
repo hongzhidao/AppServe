@@ -45,6 +45,18 @@ main(int argc, char **argv)
     }
 
     if (nxt_process_argv[1] != NULL
+        && strcmp(nxt_process_argv[1], "murmur") == 0)
+    {
+        return nxt_murmur_hash_test(thr, 0) != NXT_OK;
+    }
+
+    if (nxt_process_argv[1] != NULL
+        && strcmp(nxt_process_argv[1], "murmur_uint32") == 0)
+    {
+        return nxt_murmur_hash_test(thr, 1) != NXT_OK;
+    }
+
+    if (nxt_process_argv[1] != NULL
         && strcmp(nxt_process_argv[1], "forwarded") == 0)
     {
         return nxt_http_forwarded_test(thr) != NXT_OK;
@@ -87,6 +99,12 @@ main(int argc, char **argv)
     }
 
     if (nxt_conf_map_test(thr) != NXT_OK) {
+        return 1;
+    }
+
+    if (nxt_murmur_hash_test(thr, 0) != NXT_OK
+        || nxt_murmur_hash_test(thr, 1) != NXT_OK)
+    {
         return 1;
     }
 
