@@ -425,6 +425,62 @@ def test_asgi_application_single_thread():
 
     assert len(threads) == 1, 'requests use one application thread'
 
+def test_asgi_application_worker_idle():
+    client.load(
+        'single_thread',
+        processes={'spare': 0, 'max': 1, 'idle_timeout': 1},
+    )
+
+    def wait_for_state(active, idle, running=1):
+        for _ in range(100):
+            state = client.conf_get('/status/applications/single_thread')
+            if state == {
+                'processes': {'running': running, 'starting': 0, 'idle': idle},
+                'requests': {'active': active},
+            }:
+                return
+            time.sleep(0.05)
+        assert False, 'worker state: ' + str(state)
+
+    socks = []
+    threads = set()
+
+    try:
+        for delay in ['0.5', '3', '3', '3']:
+            socks.append(
+                client.get(
+                    headers={
+                        'Host': 'localhost',
+                        'X-Delay': delay,
+                        'Connection': 'close',
+                    },
+                    no_recv=True,
+                )
+            )
+
+        wait_for_state(4, 0)
+
+        response = client._resp_to_dict(client.recvall(socks[0]).decode())
+        assert response['status'] == 200
+        threads.add(response['headers']['x-thread'])
+
+        # The idle timeout expires while other requests are still active.
+        time.sleep(1.2)
+        wait_for_state(3, 0)
+
+        for sock in socks[1:]:
+            response = client._resp_to_dict(client.recvall(sock).decode())
+            assert response['status'] == 200
+            threads.add(response['headers']['x-thread'])
+
+        assert len(threads) == 1, 'concurrent requests use one worker thread'
+        wait_for_state(0, 1)
+        wait_for_state(0, 0, running=0)
+        assert client.get()['status'] == 200, 'worker starts again on demand'
+    finally:
+        for sock in socks:
+            sock.close()
+
 def test_asgi_application_legacy():
     client.load('legacy')
 

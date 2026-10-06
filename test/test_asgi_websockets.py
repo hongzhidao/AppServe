@@ -98,6 +98,46 @@ def test_asgi_websockets_mirror():
 
     sock.close()
 
+def test_asgi_websockets_worker_idle():
+    client.load(
+        'websockets/mirror',
+        processes={'spare': 0, 'max': 1, 'idle_timeout': 1},
+    )
+
+    def wait_for_state(idle, running=1):
+        for _ in range(100):
+            state = client.conf_get('/status/applications/websockets%2Fmirror')
+            if state == {
+                'processes': {'running': running, 'starting': 0, 'idle': idle},
+                'requests': {'active': 0},
+            }:
+                return
+            time.sleep(0.05)
+        assert False, 'worker state: ' + str(state)
+
+    socks = []
+
+    try:
+        for _ in range(2):
+            response, sock, _ = ws.upgrade()
+            socks.append(sock)
+            assert response['status'] == 101
+
+        wait_for_state(0)
+        socks[0].close()
+        time.sleep(1.2)
+        wait_for_state(0)
+
+        ws.frame_write(socks[1], ws.OP_TEXT, 'still active')
+        assert ws.frame_read(socks[1])['data'] == b'still active'
+
+        socks[1].close()
+        wait_for_state(1)
+        wait_for_state(0, running=0)
+    finally:
+        for sock in socks:
+            sock.close()
+
 def test_asgi_websockets_mirror_app_change():
     client.load('websockets/mirror')
 

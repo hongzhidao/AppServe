@@ -940,10 +940,6 @@ nxt_unit_process_msg(nxt_unit_ctx_t *ctx, nxt_unit_read_buf_t *rbuf)
         rc = nxt_unit_process_new_port(ctx, &recv_msg);
         break;
 
-    case _NXT_PORT_MSG_PORT_ACK:
-        rc = nxt_unit_ctx_ready(ctx);
-        break;
-
     case _NXT_PORT_MSG_CHANGE_FILE:
         nxt_unit_debug(ctx, "#%"PRIu32": change_file: fd %d",
                        port_msg->stream, recv_msg.fd[0]);

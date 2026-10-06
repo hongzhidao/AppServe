@@ -85,9 +85,9 @@ typedef struct {
 
 
 struct nxt_app_s {
-    nxt_thread_mutex_t     mutex;       /* Protects ports queue. */
-    nxt_queue_t            ports;       /* of nxt_port_t.app_link */
-    nxt_lvlhsh_t           port_hash;   /* of nxt_port_t */
+    nxt_thread_mutex_t     mutex;       /* Protects worker and request state. */
+    nxt_queue_t            ports;       /* Worker ports, one per process. */
+    nxt_lvlhsh_t           port_hash;   /* Worker ports, keyed by PID and ID. */
 
     nxt_queue_t            spare_ports; /* of nxt_port_t.idle_link */
     nxt_queue_t            idle_ports;  /* of nxt_port_t.idle_link */
@@ -95,8 +95,6 @@ struct nxt_app_s {
     nxt_event_engine_t     *engine;
 
     nxt_str_t              name;
-
-    uint32_t               port_hash_count;
 
     uint32_t               active_requests;
     uint32_t               pending_processes;

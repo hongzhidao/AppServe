@@ -17,7 +17,7 @@
 #include <nxt_port_memory_int.h>
 
 
-static void nxt_port_broadcast_shm_ack(nxt_task_t *task, nxt_port_t *port,
+static void nxt_port_send_shm_ack(nxt_task_t *task, nxt_port_t *port,
     void *data);
 
 
@@ -178,7 +178,7 @@ complete_buf:
     {
         process = nxt_runtime_process_find(task->thread->runtime, hdr->src_pid);
 
-        nxt_process_broadcast_shm_ack(task, process);
+        nxt_process_send_shm_ack(task, process);
     }
 
 release_buf:
@@ -857,7 +857,7 @@ nxt_port_mmap_get_method(nxt_task_t *task, nxt_port_t *port, nxt_buf_t *b)
 
 
 void
-nxt_process_broadcast_shm_ack(nxt_task_t *task, nxt_process_t *process)
+nxt_process_send_shm_ack(nxt_task_t *task, nxt_process_t *process)
 {
     nxt_port_t  *port;
 
@@ -869,20 +869,18 @@ nxt_process_broadcast_shm_ack(nxt_task_t *task, nxt_process_t *process)
     port = nxt_process_port_first(process);
 
     if (port->type == NXT_PROCESS_APP) {
-        nxt_port_post(task, port, nxt_port_broadcast_shm_ack, process);
+        nxt_assert(port->id == 0);
+
+        nxt_port_post(task, port, nxt_port_send_shm_ack, NULL);
     }
 }
 
 
 static void
-nxt_port_broadcast_shm_ack(nxt_task_t *task, nxt_port_t *port, void *data)
+nxt_port_send_shm_ack(nxt_task_t *task, nxt_port_t *port, void *data)
 {
-    nxt_process_t  *process;
-
-    process = data;
-
-    nxt_queue_each(port, &process->ports, nxt_port_t, link) {
+    if (nxt_fast_path(port->pair[1] != -1)) {
         (void) nxt_port_socket_write(task, port, NXT_PORT_MSG_SHM_ACK,
                                      -1, 0, 0, NULL);
-    } nxt_queue_loop;
+    }
 }
