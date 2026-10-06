@@ -21,10 +21,10 @@ enum {
 int nxt_cgo_run(uintptr_t handler);
 
 ssize_t nxt_cgo_response_write(nxt_unit_request_info_t *req,
-    uintptr_t src, uint32_t len);
+    const void *src, size_t len);
 
 ssize_t nxt_cgo_request_read(nxt_unit_request_info_t *req,
-    uintptr_t dst, uint32_t dst_len);
+    void *dst, size_t dst_len);
 
 void nxt_cgo_warn(const char *msg, uint32_t msg_len);
 void nxt_cgo_alert(const char *msg, uint32_t msg_len);

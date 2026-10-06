@@ -221,11 +221,20 @@ Ruby's `on_thread_boot` and `on_thread_shutdown` hooks are removed. Move
 per-process initialization and cleanup to `on_worker_boot` and
 `on_worker_shutdown`.
 
-The `nxt_unit_ctx_alloc()` API is removed. External applications use the
-execution context returned by `nxt_unit_init()`; rebuild applications against
-the new headers and library. Go's goroutine-based concurrency and threads
-created by applications or language runtimes remain supported. `libunit`
-retains the synchronization needed by the Go binding.
+The `nxt_unit_ctx_alloc()`, `nxt_unit_run_ctx()`, `nxt_unit_run_shared()`, and
+`nxt_unit_dequeue_request()` APIs are removed. External applications use
+`nxt_unit_run()` or integrate `nxt_unit_process_port_msg()` with a single-thread
+event loop. All `libunit` calls for a context must run on the same thread;
+the library no longer synchronizes concurrent calls. Rebuild applications
+against the new headers and library.
+
+Go handlers now run synchronously on one OS thread, with one receive loop
+for requests and control messages. Response writes wait for shared-memory
+acknowledgements on that thread. Use `processes` for parallel request handling;
+a slow handler occupies its application process. Go runtime background
+threads still exist, but the binding no longer starts request-handler or
+receiver goroutines. Application-created goroutines must not call request
+body or response methods concurrently or from another thread.
 
 ## Containers
 

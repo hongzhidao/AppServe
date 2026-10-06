@@ -11,14 +11,16 @@ package unit
 import "C"
 
 import (
+	"errors"
 	"net/http"
+	"unsafe"
 )
 
 type response struct {
-	header     http.Header
+	header      http.Header
 	header_sent bool
-	c_req      *C.nxt_unit_request_info_t
-	ch         chan int
+	c_req       *C.nxt_unit_request_info_t
+	err         error
 }
 
 func (r *response) Header() http.Header {
@@ -30,26 +32,21 @@ func (r *response) Write(p []byte) (n int, err error) {
 		r.WriteHeader(http.StatusOK)
 	}
 
-	l := len(p)
-	written := int(0)
-	br := buf_ref(p)
-
-	for written < l {
-		res := C.nxt_cgo_response_write(r.c_req, br, C.uint32_t(l - written))
-
-		written += int(res)
-		br += C.uintptr_t(res)
-
-		if (written < l) {
-			if r.ch == nil {
-				r.ch = make(chan int, 2)
-			}
-
-			wait_shm_ack(r.ch)
-		}
+	if r.err != nil {
+		return 0, r.err
 	}
 
-	return written, nil
+	if len(p) == 0 {
+		return 0, nil
+	}
+
+	res := C.nxt_cgo_response_write(r.c_req, unsafe.Pointer(&p[0]), C.size_t(len(p)))
+	if res < 0 {
+		r.err = errors.New("unit: failed to write response body")
+		return 0, r.err
+	}
+
+	return int(res), nil
 }
 
 func (r *response) WriteHeader(code int) {
@@ -74,34 +71,29 @@ func (r *response) WriteHeader(code int) {
 		}
 	}
 
-	C.nxt_unit_response_init(r.c_req, C.uint16_t(code), C.uint32_t(fields),
-		C.uint32_t(fields_size))
+	if C.nxt_unit_response_init(r.c_req, C.uint16_t(code), C.uint32_t(fields),
+		C.uint32_t(fields_size)) != C.NXT_UNIT_OK {
+		r.err = errors.New("unit: failed to initialize response")
+		return
+	}
 
 	for k, vv := range r.header {
 		for _, v := range vv {
-			C.nxt_unit_response_add_field(r.c_req, str_ref(k), C.uint8_t(len(k)),
-				str_ref(v), C.uint32_t(len(v)))
+			if C.nxt_unit_response_add_field(r.c_req, str_ref(k), C.uint8_t(len(k)),
+				str_ref(v), C.uint32_t(len(v))) != C.NXT_UNIT_OK {
+				r.err = errors.New("unit: failed to add response header")
+				return
+			}
 		}
 	}
 
-	C.nxt_unit_response_send(r.c_req)
+	if C.nxt_unit_response_send(r.c_req) != C.NXT_UNIT_OK {
+		r.err = errors.New("unit: failed to send response headers")
+	}
 }
 
 func (r *response) Flush() {
 	if !r.header_sent {
 		r.WriteHeader(http.StatusOK)
 	}
-}
-
-var observer_registry_ observable
-
-func wait_shm_ack(c chan int) {
-	observer_registry_.attach(c)
-
-	_ = <-c
-}
-
-//export nxt_go_shm_ack_handler
-func nxt_go_shm_ack_handler(ctx *C.nxt_unit_ctx_t) {
-	observer_registry_.notify(1)
 }

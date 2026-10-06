@@ -1,8 +1,10 @@
 import re
+import time
 
 import pytest
 
 from unit.applications.lang.go import ApplicationGo
+from unit.log import Log
 
 prerequisites = {'modules': {'go': 'all'}}
 
@@ -176,3 +178,76 @@ def test_go_application_command_line_arguments_change():
     assert (
         client.get()['headers']['Content-Length'] == '0'
     ), 'arguments empty'
+
+@pytest.mark.parametrize('processes', [1, 2])
+def test_go_application_single_thread(processes):
+    client.load('single_thread', processes=processes)
+
+    socks = [client.get(url='/delay', no_recv=True) for _ in range(6)]
+    threads = {}
+
+    try:
+        for sock in socks:
+            response = client._resp_to_dict(client.recvall(sock).decode())
+            assert response['status'] == 200
+            headers = response['headers']
+            assert headers['X-Active'] == '1', 'one active handler per process'
+            threads.setdefault(headers['X-Pid'], set()).add(headers['X-Thread'])
+    finally:
+        for sock in socks:
+            sock.close()
+
+    assert len(threads) == processes, 'parallel application processes'
+    assert all(
+        len(ids) == 1 for ids in threads.values()
+    ), 'one thread per process'
+
+def test_go_application_large_body():
+    client.load('single_thread', processes=1)
+    body = '0123456789' * 300000
+
+    response = client.post(body=body)
+
+    assert response['status'] == 200
+    assert response['body'] == body, 'large request body echoed'
+
+def test_go_application_shm_ack():
+    client.load('single_thread', processes=1)
+    assert 'success' in client.conf(
+        {'shm': 1024 * 1024}, 'applications/single_thread/limits'
+    )
+    size = 20 * 1024 * 1024
+
+    response = client.get(url='/large?size=' + str(size))
+
+    assert response['status'] == 200
+    assert response['body'] == 'x' * size, 'response exceeds shared-memory limit'
+    assert client.get()['status'] == 200, 'process remains responsive'
+
+def test_go_application_quit_during_shm_wait():
+    def wait_for_record(pattern):
+        for _ in range(150):
+            with open(Log.get_path()) as log:
+                if re.search(pattern, log.read()):
+                    return True
+            time.sleep(0.1)
+        return False
+
+    client.load('single_thread', processes=1)
+    assert 'success' in client.conf(
+        {'shm': 1024 * 1024}, 'applications/single_thread/limits'
+    )
+    pid = client.get()['headers']['X-Pid']
+    sock = client.get(url='/large?size=67108864', no_recv=True)
+
+    try:
+        assert wait_for_record(pid + r'#.*oosm: waiting for ACK')
+        assert 'success' in client.conf_get(
+            '/control/applications/single_thread/restart'
+        )
+        assert wait_for_record(pid + r'#.*oosm: quit received')
+        assert wait_for_record('process ' + pid + ' exited with code 0')
+    finally:
+        sock.close()
+
+    assert client.get()['status'] == 200, 'replacement process works'

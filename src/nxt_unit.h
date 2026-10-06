@@ -48,7 +48,9 @@ struct nxt_unit_s {
 };
 
 /*
- * Application execution context, provided by nxt_unit_init().
+ * Application execution context, provided by nxt_unit_init().  All library
+ * calls and callbacks for this context must run on one thread.  Asynchronous
+ * applications may keep multiple requests active on that thread.
  */
 struct nxt_unit_ctx_s {
     void                  *data;  /* User context-specific data. */
@@ -206,12 +208,6 @@ nxt_unit_ctx_t *nxt_unit_init(nxt_unit_init_t *);
  * The normally function returns when QUIT message received from Unit.
  */
 int nxt_unit_run(nxt_unit_ctx_t *);
-
-int nxt_unit_run_ctx(nxt_unit_ctx_t *ctx);
-
-int nxt_unit_run_shared(nxt_unit_ctx_t *ctx);
-
-nxt_unit_request_info_t *nxt_unit_dequeue_request(nxt_unit_ctx_t *ctx);
 
 /*
  * Receive and process one message, invoke configured callbacks.
