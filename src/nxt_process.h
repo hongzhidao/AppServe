@@ -46,7 +46,7 @@ typedef union {
     nxt_controller_init_t      controller;
     void                       *router;
     nxt_common_app_conf_t      *app;
-} nxt_process_data_t;
+} nxt_process_startup_t;
 
 
 typedef enum {
@@ -116,7 +116,7 @@ struct nxt_process_s {
     nxt_queue_t              children;   /* of nxt_process_t.link */
     nxt_queue_link_t         link;       /* for nxt_process_t.children */
 
-    nxt_process_data_t       data;
+    nxt_process_startup_t    start;
 
     nxt_process_isolation_t  isolation;
 };
@@ -129,7 +129,7 @@ typedef nxt_int_t (*nxt_process_postfork_t)(nxt_task_t *task,
 typedef nxt_int_t (*nxt_process_setup_t)(nxt_task_t *task,
     nxt_process_t *process);
 typedef nxt_int_t (*nxt_process_start_t)(nxt_task_t *task,
-    nxt_process_data_t *data);
+    nxt_process_startup_t *startup);
 
 
 typedef struct {

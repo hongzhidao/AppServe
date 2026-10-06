@@ -44,7 +44,7 @@ static nxt_int_t nxt_controller_prefork(nxt_task_t *task,
 static nxt_int_t nxt_controller_file_read(nxt_task_t *task, const char *name,
     nxt_str_t *str, nxt_mp_t *mp);
 static nxt_int_t nxt_controller_start(nxt_task_t *task,
-    nxt_process_data_t *data);
+    nxt_process_startup_t *startup);
 static void nxt_controller_process_new_port_handler(nxt_task_t *task,
     nxt_port_recv_msg_t *msg);
 static void nxt_controller_send_current_conf(nxt_task_t *task);
@@ -197,7 +197,7 @@ nxt_controller_prefork(nxt_task_t *task, nxt_process_t *process, nxt_mp_t *mp)
         }
     }
 
-    process->data.controller = ctrl_init;
+    process->start.controller = ctrl_init;
 
     return NXT_OK;
 }
@@ -255,7 +255,7 @@ fail:
 
 
 static nxt_int_t
-nxt_controller_start(nxt_task_t *task, nxt_process_data_t *data)
+nxt_controller_start(nxt_task_t *task, nxt_process_startup_t *startup)
 {
     nxt_mp_t               *mp;
     nxt_int_t              ret;
@@ -274,7 +274,7 @@ nxt_controller_start(nxt_task_t *task, nxt_process_data_t *data)
 
     nxt_queue_init(&nxt_controller_waiting_requests);
 
-    init = &data->controller;
+    init = &startup->controller;
 
     json = &init->conf;
 
