@@ -79,7 +79,7 @@ Dockerfile.%: template.Dockerfile ../../version
 
 $(SOURCE_ARCHIVE): FORCE
 	tar -C ../.. -czf $@ --exclude='__pycache__' --exclude='*.pyc' \
-		LICENSE NOTICE CHANGES README configure auto src go version docs/man docs/migration.md
+		LICENSE NOTICE CHANGES README.md configure auto src go version docs/man
 
 build-%: Dockerfile.% $(SOURCE_ARCHIVE)
 	docker pull $(CONTAINER_$*)

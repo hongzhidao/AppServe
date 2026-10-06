@@ -43,7 +43,7 @@ LABEL org.opencontainers.image.title="AppServe"
 LABEL org.opencontainers.image.description="AppServe application server for Docker."
 LABEL org.opencontainers.image.url="https://github.com/hongzhidao/AppServe"
 LABEL org.opencontainers.image.source="https://github.com/hongzhidao/AppServe"
-LABEL org.opencontainers.image.documentation="https://github.com/hongzhidao/AppServe/blob/main/docs/migration.md"
+LABEL org.opencontainers.image.documentation="https://github.com/hongzhidao/AppServe/blob/main/README.md"
 LABEL org.opencontainers.image.vendor="Zhidao HONG"
 LABEL org.opencontainers.image.version="0.1.0"
 COPY docker-entrypoint.sh /usr/local/bin/

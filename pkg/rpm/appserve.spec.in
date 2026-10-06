@@ -114,9 +114,7 @@ DESTDIR=%{buildroot} make appserved-install libunit-install manpage-install
     %{buildroot}%{_datadir}/doc/appserve/
 %{__install} -m 644 -p NOTICE \
     %{buildroot}%{_datadir}/doc/appserve/COPYRIGHT
-%{__install} -m 644 -p README \
-    %{buildroot}%{_datadir}/doc/appserve/
-%{__install} -m 644 -p docs/migration.md \
+%{__install} -m 644 -p README.md \
     %{buildroot}%{_datadir}/doc/appserve/
 
 %{__rm} -rf %{buildroot}%{_initrddir}/
@@ -160,7 +158,7 @@ Thank you for installing AppServe!
 Additional modules are available in standalone packages.
 To see the available modules, run "yum list available appserve-\*".
 
-Project repository (currently private): https://github.com/hongzhidao/AppServe
+Project repository: https://github.com/hongzhidao/AppServe
 
 ----------------------------------------------------------------------
 BANNER

@@ -40,7 +40,7 @@ To check out the sample app, run these commands:
  sudo curl -X PUT --data-binary @appserve.config --unix-socket /var/run/control.appserve.sock http://localhost/config
  curl http://localhost:8700/
 
-Project repository (currently private): https://github.com/hongzhidao/AppServe
+Project repository: https://github.com/hongzhidao/AppServe
 
 ----------------------------------------------------------------------
 BANNER

@@ -24,20 +24,6 @@ Python, PHP, Ruby, Go, and external applications remain supported.
   vector, time parsing, and sendfile code. Connection output uses memory
   buffers; large request bodies still use temporary files passed to applications.
 
-## Migration
-
-This release changes the supported configuration. Remove obsolete settings
-before upgrading; configurations containing them are rejected. Use an
-application or front-end proxy for the removed HTTP features, and replace
-legacy `client_ip` and `forwarded` options with `forwarded.trusted`. Configure
-the proxy to emit `Forwarded`; `X-Forwarded-For`, `X-Real-IP`, and
-`X-Forwarded-Proto` no longer change application metadata.
-
-See [the migration guide](migration.md) for configuration examples and the
-full list of removed settings. The `nxt_unit_*` API and retained binding
-identifiers keep their names; rebuild modules and external applications
-against the deployed version.
-
 ## Verification
 
 Verified on Linux aarch64 with GCC 13.3.0 and Python 3.12.3:
@@ -76,8 +62,8 @@ in isolation.
 Release date: October 5, 2026.
 
 This is the first release under the AppServe name, continuing the development
-and maintenance of NGINX Unit. The repository at
-https://github.com/hongzhidao/AppServe is currently private.
+and maintenance of NGINX Unit. The project repository is at
+https://github.com/hongzhidao/AppServe.
 
 ## Changes
 
@@ -90,8 +76,7 @@ https://github.com/hongzhidao/AppServe is currently private.
 - The configuration API, `libunit`, and existing language binding identifiers
   retain their names for application source compatibility.
 
-See [the migration guide](migration.md) for deployment changes. Original
-copyright notices are retained.
+Original copyright notices are retained.
 
 ## Verification
 

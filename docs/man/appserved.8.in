@@ -69,7 +69,7 @@ The socket address of AppServe's control API.
 (C) 2017-2021, NGINX, Inc.
 .Sh SEE ALSO
 .Pp
-AppServe repository and issue tracking (currently private):
+AppServe repository and issue tracking:
 .Pa https://github.com/hongzhidao/AppServe
 .Pp
 Upstream Unit documentation:

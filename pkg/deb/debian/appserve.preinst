@@ -12,7 +12,7 @@ Thank you for installing AppServe!
 Additional modules are available in standalone packages.
 To see the available modules, run: apt search --names-only '^appserve-'
 
-Project repository (currently private): https://github.com/hongzhidao/AppServe
+Project repository: https://github.com/hongzhidao/AppServe
 
 ----------------------------------------------------------------------
 BANNER
