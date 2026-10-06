@@ -549,7 +549,9 @@ nxt_vsprintf(u_char *buf, u_char *end, const char *fmt, va_list args)
 
     copy:
 
-        buf = nxt_cpymem(buf, p, nxt_min((size_t) (end - buf), length));
+        if (length != 0) {
+            buf = nxt_cpymem(buf, p, nxt_min((size_t) (end - buf), length));
+        }
         continue;
     }
 

@@ -45,10 +45,18 @@ nxt_sprintf_test(nxt_thread_t *thr)
     nxt_int_t   ret;
     nxt_uint_t  i;
     u_char      *end, buf[64];
+    nxt_str_t   empty = nxt_null_string;
 
     nxt_thread_time_update(thr);
 
     end = buf + 64;
+
+    if (nxt_sprintf(buf, end, "[%V]%c", &empty, 'x') != buf + 3
+        || memcmp(buf, "[]x", 3) != 0)
+    {
+        nxt_log_alert(thr->log, "nxt_sprintf() empty string test failed");
+        return NXT_ERROR;
+    }
 
     for (i = 0; i < nxt_nitems(double_test); i++) {
 
