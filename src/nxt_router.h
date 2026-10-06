@@ -22,11 +22,21 @@ typedef struct nxt_http_addr_rule_s  nxt_http_addr_rule_t;
 
 typedef struct {
     nxt_thread_spinlock_t    lock;
-    nxt_queue_t              engines;
+    nxt_queue_t              threads;   /* of nxt_router_thread_t */
 
-    nxt_queue_t              sockets;  /* of nxt_socket_conf_t */
-    nxt_queue_t              apps;     /* of nxt_app_t */
+    nxt_queue_t              sockets;   /* of nxt_socket_conf_t */
+    nxt_queue_t              apps;      /* of nxt_app_t */
 } nxt_router_t;
+
+
+typedef struct {
+    nxt_router_t            *router;
+    nxt_event_engine_t      *engine;
+    nxt_port_t              *port;
+    nxt_queue_t             joints;
+    nxt_queue_link_t        link;
+    nxt_thread_link_t       *thread_link;
+} nxt_router_thread_t;
 
 
 typedef struct {
@@ -42,15 +52,15 @@ typedef struct {
 
 
 typedef struct {
-    nxt_event_engine_t     *engine;
+    nxt_router_thread_t    *thread;
     nxt_work_t             *jobs;
 
     enum {
-        NXT_ROUTER_ENGINE_KEEP = 0,
-        NXT_ROUTER_ENGINE_ADD,
-        NXT_ROUTER_ENGINE_DELETE,
+        NXT_ROUTER_THREAD_KEEP = 0,
+        NXT_ROUTER_THREAD_ADD,
+        NXT_ROUTER_THREAD_DELETE,
     }                      action;
-} nxt_router_engine_conf_t;
+} nxt_router_thread_conf_t;
 
 
 typedef struct {
@@ -61,9 +71,9 @@ typedef struct {
     uint32_t               stream;
     uint32_t               count;
 
-    nxt_event_engine_t     *engine;
+    nxt_router_thread_t    *thread;
     nxt_port_t             *port;
-    nxt_array_t            *engines;
+    nxt_array_t            *threads;
     nxt_router_conf_t      *router_conf;
     nxt_mp_t               *mem_pool;
 } nxt_router_temp_conf_t;
@@ -202,7 +212,11 @@ void nxt_router_conf_error(nxt_task_t *task, nxt_router_temp_conf_t *tmcf);
 void nxt_router_conf_release(nxt_task_t *task, nxt_socket_conf_joint_t *joint);
 
 
-extern nxt_router_t  *nxt_router;
+nxt_inline nxt_router_thread_t *
+nxt_router_thread(nxt_task_t *task)
+{
+    return task->thread->data;
+}
 
 
 #endif  /* _NXT_ROUTER_H_INCLUDED_ */

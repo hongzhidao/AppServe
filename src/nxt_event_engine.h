@@ -483,9 +483,7 @@ struct nxt_event_engine_s {
     uint32_t                   connections;
     uint32_t                   max_connections;
 
-    nxt_port_t                 *port;
     nxt_mp_t                   *mem_pool;
-    nxt_queue_t                joints;
     nxt_queue_t                listen_connections;
     nxt_queue_t                idle_connections;
     nxt_array_t                *mem_cache;
@@ -496,8 +494,6 @@ struct nxt_event_engine_s {
     nxt_atomic_uint_t          requests_cnt;
 
     nxt_queue_link_t           link;
-    // STUB: router link
-    nxt_queue_link_t           link0;
 };
 
 

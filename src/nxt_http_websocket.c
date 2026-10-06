@@ -101,7 +101,7 @@ nxt_http_websocket_client(nxt_task_t *task, void *obj, void *data)
     res = nxt_port_socket_write(task, req_rpc_data->app_port,
                                 NXT_PORT_MSG_WEBSOCKET, -1,
                                 req_rpc_data->stream,
-                                task->thread->engine->port->id, out);
+                                nxt_router_thread(task)->port->id, out);
     if (nxt_slow_path(res != NXT_OK)) {
         // TODO: handle
     }
@@ -147,7 +147,7 @@ nxt_http_websocket_error_handler(nxt_task_t *task, void *obj, void *data)
     (void) nxt_port_socket_write(task, req_rpc_data->app_port,
                                  NXT_PORT_MSG_WEBSOCKET_LAST,
                                  -1, req_rpc_data->stream,
-                                 task->thread->engine->port->id, NULL);
+                                 nxt_router_thread(task)->port->id, NULL);
 
 close_handler:
 
