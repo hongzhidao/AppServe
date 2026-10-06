@@ -12,7 +12,7 @@ def application(environ, start_response):
         [
             ('Content-Length', '0'),
             ('Wsgi-Multithread', str(environ['wsgi.multithread'])),
-            ('X-Thread', str(threading.currentThread().ident)),
+            ('X-Thread', str(threading.current_thread().ident)),
         ],
     )
 

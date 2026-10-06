@@ -11,6 +11,10 @@ Listener pass values name a fixed application and optional target.  Python,
 PHP, Ruby, Go, and external applications are supported.  Use a front-end
 proxy for TLS termination, request routing, static files, and access logging.
 
+Python and Ruby application processes use one request execution thread.
+Configure application processes for parallel workers; ASGI applications can
+handle concurrent requests on their event loop.
+
 AppServe continues the development and maintenance of NGINX Unit.
 
 Source code and issue tracking:

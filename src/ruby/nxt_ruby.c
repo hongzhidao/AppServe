@@ -44,14 +44,8 @@ static VALUE nxt_ruby_rack_env_create(VALUE arg);
 static int nxt_ruby_init_io(nxt_ruby_ctx_t *rctx);
 static void nxt_ruby_request_handler(nxt_unit_request_info_t *req);
 static void *nxt_ruby_request_handler_gvl(void *req);
-static int nxt_ruby_ready_handler(nxt_unit_ctx_t *ctx);
-static void *nxt_ruby_thread_create_gvl(void *rctx);
-static VALUE nxt_ruby_thread_func(VALUE arg);
 static void *nxt_ruby_unit_run(void *ctx);
 static void nxt_ruby_ubf(void *ctx);
-static int nxt_ruby_init_threads(nxt_ruby_app_conf_t *c);
-static void nxt_ruby_join_threads(nxt_unit_ctx_t *ctx,
-    nxt_ruby_app_conf_t *c);
 
 static VALUE nxt_ruby_rack_app_run(VALUE arg);
 static int nxt_ruby_read_request(nxt_unit_request_info_t *req, VALUE hash_env);
@@ -87,9 +81,6 @@ static VALUE  nxt_ruby_hook_procs;
 static VALUE  nxt_ruby_rackup;
 static VALUE  nxt_ruby_call;
 
-static uint32_t        nxt_ruby_threads;
-static nxt_ruby_ctx_t  *nxt_ruby_ctxs;
-
 NXT_EXPORT nxt_app_module_t  nxt_app_module = {
     sizeof(compat),
     compat,
@@ -122,8 +113,6 @@ static VALUE  nxt_rb_server_port_str;
 static VALUE  nxt_rb_server_protocol_str;
 static VALUE  nxt_rb_on_worker_boot;
 static VALUE  nxt_rb_on_worker_shutdown;
-static VALUE  nxt_rb_on_thread_boot;
-static VALUE  nxt_rb_on_thread_shutdown;
 
 static nxt_ruby_string_t nxt_rb_strings[] = {
     { nxt_string("CONTENT_LENGTH"), &nxt_rb_content_length_str },
@@ -142,8 +131,6 @@ static nxt_ruby_string_t nxt_rb_strings[] = {
     { nxt_string("SERVER_PROTOCOL"), &nxt_rb_server_protocol_str },
     { nxt_string("on_worker_boot"), &nxt_rb_on_worker_boot },
     { nxt_string("on_worker_shutdown"), &nxt_rb_on_worker_shutdown },
-    { nxt_string("on_thread_boot"), &nxt_rb_on_thread_boot },
-    { nxt_string("on_thread_shutdown"), &nxt_rb_on_thread_shutdown },
     { nxt_null_string, NULL },
 };
 
@@ -210,10 +197,6 @@ nxt_ruby_hook_procs_load(VALUE path)
                               &nxt_ruby_hook_register, 0);
     rb_define_module_function(module, "on_worker_shutdown",
                               &nxt_ruby_hook_register, 0);
-    rb_define_module_function(module, "on_thread_boot",
-                              &nxt_ruby_hook_register, 0);
-    rb_define_module_function(module, "on_thread_shutdown",
-                              &nxt_ruby_hook_register, 0);
 
     file = rb_const_get(rb_cObject, rb_intern("File"));
     file_obj = rb_funcall(file, rb_intern("read"), 1, path);
@@ -271,8 +254,6 @@ nxt_ruby_start(nxt_task_t *task, nxt_process_data_t *data)
     conf = data->app;
     c = &conf->u.ruby;
 
-    nxt_ruby_threads = c->threads;
-
     setlocale(LC_CTYPE, "");
 
     RUBY_INIT_STACK
@@ -283,8 +264,6 @@ nxt_ruby_start(nxt_task_t *task, nxt_process_data_t *data)
     ruby_ctx.env = Qnil;
     ruby_ctx.io_input = Qnil;
     ruby_ctx.io_error = Qnil;
-    ruby_ctx.thread = Qnil;
-    ruby_ctx.ctx = NULL;
     ruby_ctx.req = NULL;
 
     rack_init.task = task;
@@ -350,16 +329,9 @@ nxt_ruby_start(nxt_task_t *task, nxt_process_data_t *data)
         goto fail;
     }
 
-    rc = nxt_ruby_init_threads(c);
-    if (nxt_slow_path(rc == NXT_UNIT_ERROR)) {
-        goto fail;
-    }
-
     nxt_unit_default_init(task, &ruby_unit_init, conf);
 
     ruby_unit_init.callbacks.request_handler = nxt_ruby_request_handler;
-    ruby_unit_init.callbacks.ready_handler = nxt_ruby_ready_handler;
-    ruby_unit_init.data = c;
     ruby_unit_init.ctx_data = &ruby_ctx;
 
     unit_ctx = nxt_unit_init(&ruby_unit_init);
@@ -367,26 +339,8 @@ nxt_ruby_start(nxt_task_t *task, nxt_process_data_t *data)
         goto fail;
     }
 
-    if (nxt_ruby_hook_procs != Qnil) {
-        rb_protect(nxt_ruby_hook_call, nxt_rb_on_thread_boot, &state);
-        if (nxt_slow_path(state != 0)) {
-            nxt_ruby_exception_log(NULL, NXT_LOG_ERR,
-                                   "Failed to call on_thread_boot()");
-        }
-    }
-
     rc = (intptr_t) rb_thread_call_without_gvl2(nxt_ruby_unit_run, unit_ctx,
                                                 nxt_ruby_ubf, unit_ctx);
-
-    if (nxt_ruby_hook_procs != Qnil) {
-        rb_protect(nxt_ruby_hook_call, nxt_rb_on_thread_shutdown, &state);
-        if (nxt_slow_path(state != 0)) {
-            nxt_ruby_exception_log(NULL, NXT_LOG_ERR,
-                                   "Failed to call on_thread_shutdown()");
-        }
-    }
-
-    nxt_ruby_join_threads(unit_ctx, c);
 
     if (nxt_ruby_hook_procs != Qnil) {
         rb_protect(nxt_ruby_hook_call, nxt_rb_on_worker_shutdown, &state);
@@ -407,8 +361,6 @@ nxt_ruby_start(nxt_task_t *task, nxt_process_data_t *data)
     return NXT_OK;
 
 fail:
-
-    nxt_ruby_join_threads(NULL, c);
 
     nxt_ruby_ctx_done(&ruby_ctx);
 
@@ -564,8 +516,7 @@ nxt_ruby_rack_env_create(VALUE arg)
     rb_hash_aset(hash_env, rb_str_new2("rack.version"), version);
     rb_hash_aset(hash_env, rb_str_new2("rack.input"), rctx->io_input);
     rb_hash_aset(hash_env, rb_str_new2("rack.errors"), rctx->io_error);
-    rb_hash_aset(hash_env, rb_str_new2("rack.multithread"),
-                 nxt_ruby_threads > 1 ? Qtrue : Qfalse);
+    rb_hash_aset(hash_env, rb_str_new2("rack.multithread"), Qfalse);
     rb_hash_aset(hash_env, rb_str_new2("rack.multiprocess"), Qtrue);
     rb_hash_aset(hash_env, rb_str_new2("rack.run_once"), Qfalse);
     rb_hash_aset(hash_env, rb_str_new2("rack.hijack?"), Qfalse);
@@ -1247,99 +1198,6 @@ nxt_ruby_atexit(void)
 }
 
 
-static int
-nxt_ruby_ready_handler(nxt_unit_ctx_t *ctx)
-{
-    VALUE                res;
-    uint32_t             i;
-    nxt_ruby_ctx_t       *rctx;
-    nxt_ruby_app_conf_t  *c;
-
-    c = ctx->unit->data;
-
-    if (c->threads <= 1) {
-        return NXT_UNIT_OK;
-    }
-
-    for (i = 0; i < c->threads - 1; i++) {
-        rctx = &nxt_ruby_ctxs[i];
-
-        rctx->ctx = ctx;
-
-        res = (VALUE) rb_thread_call_with_gvl(nxt_ruby_thread_create_gvl, rctx);
-
-        if (nxt_fast_path(res != Qnil)) {
-            nxt_unit_debug(ctx, "thread #%d created", (int) (i + 1));
-
-            rctx->thread = res;
-
-        } else {
-            nxt_unit_alert(ctx, "thread #%d create failed", (int) (i + 1));
-
-            return NXT_UNIT_ERROR;
-        }
-    }
-
-    return NXT_UNIT_OK;
-}
-
-
-static void *
-nxt_ruby_thread_create_gvl(void *rctx)
-{
-    VALUE  res;
-
-    res = rb_thread_create(RUBY_METHOD_FUNC(nxt_ruby_thread_func), rctx);
-
-    return (void *) (uintptr_t) res;
-}
-
-
-static VALUE
-nxt_ruby_thread_func(VALUE arg)
-{
-    int             state;
-    nxt_unit_ctx_t  *ctx;
-    nxt_ruby_ctx_t  *rctx;
-
-    rctx = (nxt_ruby_ctx_t *) (uintptr_t) arg;
-
-    nxt_unit_debug(rctx->ctx, "worker thread start");
-
-    ctx = nxt_unit_ctx_alloc(rctx->ctx, rctx);
-    if (nxt_slow_path(ctx == NULL)) {
-        goto fail;
-    }
-
-    if (nxt_ruby_hook_procs != Qnil) {
-        rb_protect(nxt_ruby_hook_call, nxt_rb_on_thread_boot, &state);
-        if (nxt_slow_path(state != 0)) {
-            nxt_ruby_exception_log(NULL, NXT_LOG_ERR,
-                                   "Failed to call on_thread_boot()");
-        }
-    }
-
-    (void) rb_thread_call_without_gvl(nxt_ruby_unit_run, ctx,
-                                      nxt_ruby_ubf, ctx);
-
-    if (nxt_ruby_hook_procs != Qnil) {
-        rb_protect(nxt_ruby_hook_call, nxt_rb_on_thread_shutdown, &state);
-        if (nxt_slow_path(state != 0)) {
-            nxt_ruby_exception_log(NULL, NXT_LOG_ERR,
-                                   "Failed to call on_thread_shutdown()");
-        }
-    }
-
-    nxt_unit_done(ctx);
-
-fail:
-
-    nxt_unit_debug(NULL, "worker thread end");
-
-    return Qnil;
-}
-
-
 static void *
 nxt_ruby_unit_run(void *ctx)
 {
@@ -1351,79 +1209,4 @@ static void
 nxt_ruby_ubf(void *ctx)
 {
     nxt_unit_warn(ctx, "Ruby: UBF");
-}
-
-
-static int
-nxt_ruby_init_threads(nxt_ruby_app_conf_t *c)
-{
-    int             state;
-    uint32_t        i;
-    nxt_ruby_ctx_t  *rctx;
-
-    if (c->threads <= 1) {
-        return NXT_UNIT_OK;
-    }
-
-    nxt_ruby_ctxs = nxt_unit_malloc(NULL, sizeof(nxt_ruby_ctx_t)
-                                          * (c->threads - 1));
-    if (nxt_slow_path(nxt_ruby_ctxs == NULL)) {
-        nxt_unit_alert(NULL, "Failed to allocate run contexts array");
-
-        return NXT_UNIT_ERROR;
-    }
-
-    for (i = 0; i < c->threads - 1; i++) {
-        rctx = &nxt_ruby_ctxs[i];
-
-        rctx->env = Qnil;
-        rctx->io_input = Qnil;
-        rctx->io_error = Qnil;
-        rctx->thread = Qnil;
-    }
-
-    for (i = 0; i < c->threads - 1; i++) {
-        rctx = &nxt_ruby_ctxs[i];
-
-        rctx->env = rb_protect(nxt_ruby_rack_env_create,
-                               (VALUE) (uintptr_t) rctx, &state);
-        if (nxt_slow_path(rctx->env == Qnil || state != 0)) {
-            nxt_ruby_exception_log(NULL, NXT_LOG_ALERT,
-                                   "Failed to create 'environ' variable");
-            return NXT_UNIT_ERROR;
-        }
-    }
-
-    return NXT_UNIT_OK;
-}
-
-
-static void
-nxt_ruby_join_threads(nxt_unit_ctx_t *ctx, nxt_ruby_app_conf_t *c)
-{
-    uint32_t        i;
-    nxt_ruby_ctx_t  *rctx;
-
-    if (nxt_ruby_ctxs == NULL) {
-        return;
-    }
-
-    for (i = 0; i < c->threads - 1; i++) {
-        rctx = &nxt_ruby_ctxs[i];
-
-        if (rctx->thread != Qnil) {
-            rb_funcall(rctx->thread, rb_intern("join"), 0);
-
-            nxt_unit_debug(ctx, "thread #%d joined", (int) (i + 1));
-
-        } else {
-            nxt_unit_debug(ctx, "thread #%d not started", (int) (i + 1));
-        }
-    }
-
-    for (i = 0; i < c->threads - 1; i++) {
-        nxt_ruby_ctx_done(&nxt_ruby_ctxs[i]);
-    }
-
-    nxt_unit_free(ctx, nxt_ruby_ctxs);
 }

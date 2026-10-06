@@ -208,6 +208,25 @@ The access-log response variables `$status`, `$body_bytes_sent`, and
 Daemon and application diagnostic output still uses `appserve.log`, and
 `SIGUSR1` continues to reopen that log for rotation.
 
+## Application execution threads
+
+Starting with AppServe 0.3.0, Python (WSGI/ASGI) and Ruby application processes
+use one request execution thread. Remove `threads` and Python's
+`thread_stack_size` from application configurations, including `threads: 1`;
+these parameters are rejected as unknown. Use `processes` to configure
+parallel workers. ASGI applications continue to handle concurrent requests
+on a single event loop. `wsgi.multithread` and `rack.multithread` are false.
+
+Ruby's `on_thread_boot` and `on_thread_shutdown` hooks are removed. Move
+per-process initialization and cleanup to `on_worker_boot` and
+`on_worker_shutdown`.
+
+The `nxt_unit_ctx_alloc()` API is removed. External applications use the
+execution context returned by `nxt_unit_init()`; rebuild applications against
+the new headers and library. Go's goroutine-based concurrency and threads
+created by applications or language runtimes remain supported. `libunit`
+retains the synchronization needed by the Go binding.
+
 ## Containers
 
 Generate Dockerfiles with `make -C pkg/docker dockerfiles` and build images with

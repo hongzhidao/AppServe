@@ -1,3 +1,4 @@
+import json
 import re
 import subprocess
 
@@ -386,12 +387,28 @@ def test_ruby_application_constants():
     assert len(headers['X-Revision']) > 0, 'RUBY_REVISION'
     assert len(headers['X-Version']) > 0, 'RUBY_VERSION'
 
-def test_ruby_application_threads():
-    client.load('threads')
+@pytest.mark.parametrize('value', [1, 4, None, {}])
+@pytest.mark.parametrize('path', ['', 'threads'])
+def test_ruby_application_threads_unsupported(value, path):
+    client.load('single_thread')
+    before = client.conf_get()
 
-    assert 'success' in client.conf(
-        '4', 'applications/threads/threads'
-    ), 'configure 4 threads'
+    if path == '':
+        conf = client.conf_get('applications/single_thread')
+        conf['threads'] = value
+        result = client.conf(conf, 'applications/single_thread')
+    else:
+        result = client.conf(
+            json.dumps(value), 'applications/single_thread/threads'
+        )
+
+    assert 'error' in result, 'unsupported application thread configuration'
+    assert result['detail'] == 'Unknown parameter "threads".'
+    assert client.conf_get() == before, 'configuration unchanged'
+    assert client.get()['status'] == 200, 'original application still works'
+
+def test_ruby_application_single_thread():
+    client.load('single_thread', processes=1)
 
     socks = []
 
@@ -399,7 +416,7 @@ def test_ruby_application_threads():
         sock = client.get(
             headers={
                 'Host': 'localhost',
-                'X-Delay': '2',
+                'X-Delay': '0.1',
                 'Connection': 'close',
             },
             no_recv=True,
@@ -420,8 +437,8 @@ def test_ruby_application_threads():
 
         threads.add(resp['headers']['X-Thread'])
 
-        assert resp['headers']['Rack-Multithread'] == 'true', 'multithread'
+        assert resp['headers']['Rack-Multithread'] == 'false', 'multithread'
 
         sock.close()
 
-    assert len(socks) == len(threads), 'threads differs'
+    assert len(threads) == 1, 'requests use one application thread'

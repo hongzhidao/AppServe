@@ -1,4 +1,5 @@
 import grp
+import json
 import os
 import pwd
 import re
@@ -894,8 +895,29 @@ def test_python_application_path_invalid():
     check_path('{}')
     check_path('["/blah", []]')
 
-def test_python_application_threads():
-    client.load('threads', threads=4)
+@pytest.mark.parametrize('parameter', ['threads', 'thread_stack_size'])
+@pytest.mark.parametrize('value', [1, 4, 65536, None, {}])
+@pytest.mark.parametrize('path', ['', 'parameter'])
+def test_python_application_threads_unsupported(parameter, value, path):
+    client.load('empty')
+    before = client.conf_get()
+
+    if path == '':
+        conf = client.conf_get('applications/empty')
+        conf[parameter] = value
+        result = client.conf(conf, 'applications/empty')
+    else:
+        result = client.conf(
+            json.dumps(value), 'applications/empty/' + parameter
+        )
+
+    assert 'error' in result, 'unsupported application thread configuration'
+    assert result['detail'] == 'Unknown parameter "' + parameter + '".'
+    assert client.conf_get() == before, 'configuration unchanged'
+    assert client.get()['status'] == 200, 'original application still works'
+
+def test_python_application_single_thread():
+    client.load('single_thread', processes=1)
 
     socks = []
 
@@ -903,7 +925,7 @@ def test_python_application_threads():
         sock = client.get(
             headers={
                 'Host': 'localhost',
-                'X-Delay': '2',
+                'X-Delay': '0.1',
                 'Connection': 'close',
             },
             no_recv=True,
@@ -924,8 +946,8 @@ def test_python_application_threads():
 
         threads.add(resp['headers']['X-Thread'])
 
-        assert resp['headers']['Wsgi-Multithread'] == 'True', 'multithread'
+        assert resp['headers']['Wsgi-Multithread'] == 'False', 'multithread'
 
         sock.close()
 
-    assert len(socks) == len(threads), 'threads differs'
+    assert len(threads) == 1, 'requests use one application thread'
