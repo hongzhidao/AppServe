@@ -873,7 +873,7 @@ nxt_router_status_handler(nxt_task_t *task, nxt_port_recv_msg_t *msg)
     uint32_t             processes, idle;
     nxt_app_t            *app;
     nxt_buf_t            *b;
-    nxt_uint_t           type;
+    nxt_uint_t           type, i;
     nxt_port_t           *port;
     nxt_router_t         *router;
     nxt_status_app_t     *app_stat;
@@ -938,6 +938,11 @@ nxt_router_status_handler(nxt_task_t *task, nxt_port_recv_msg_t *msg)
         report->failed_requests += app_stat->failed_requests;
         report->busy_processes += app_stat->busy_processes;
         report->idle_processes += app_stat->idle_processes;
+
+        for (i = 0; i < nxt_nitems(app_stat->responses); i++) {
+            app_stat->responses[i] = app->responses[i];
+            report->responses[i] += app_stat->responses[i];
+        }
 
         report->apps_count++;
         app_stat++;

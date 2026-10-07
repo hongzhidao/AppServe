@@ -117,6 +117,7 @@ def test_asgi_websockets_worker_idle():
                     'idle': idle,
                 },
                 'requests': {'total': 2, 'active': 0, 'completed': 2, 'failed': 0},
+                'responses': {'1xx': 2, '2xx': 0, '3xx': 0, '4xx': 0, '5xx': 0},
             }:
                 return
             time.sleep(0.05)
@@ -131,6 +132,9 @@ def test_asgi_websockets_worker_idle():
             assert response['status'] == 101
 
         wait_for_state(0)
+        assert client.conf_get('/status/responses') == {
+            '1xx': 2, '2xx': 0, '3xx': 0, '4xx': 0, '5xx': 0,
+        }
         socks[0].close()
         time.sleep(1.2)
         wait_for_state(0)

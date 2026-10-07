@@ -12,6 +12,7 @@ typedef struct {
     uint64_t          total_requests;
     uint64_t          completed_requests;
     uint64_t          failed_requests;
+    uint64_t          responses[5];
     uint32_t          active_requests;
     uint32_t          max_processes;
     uint32_t          spare_processes;
@@ -27,6 +28,7 @@ typedef struct {
     uint64_t          failed_requests;
     uint64_t          busy_processes;
     uint64_t          idle_processes;
+    uint64_t          responses[5];
 
     size_t            apps_count;
     nxt_status_app_t  apps[];

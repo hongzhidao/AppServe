@@ -11,7 +11,7 @@
 nxt_conf_value_t *
 nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
 {
-    size_t            i;
+    size_t            i, j;
     nxt_str_t         name;
     nxt_int_t         ret;
     nxt_status_app_t  *app;
@@ -28,8 +28,16 @@ nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
     static nxt_str_t spare_str = nxt_string("spare");
     static nxt_str_t busy_str = nxt_string("busy");
     static nxt_str_t idle_str = nxt_string("idle");
+    static nxt_str_t responses_str = nxt_string("responses");
+    static nxt_str_t response_classes[] = {
+        nxt_string("1xx"),
+        nxt_string("2xx"),
+        nxt_string("3xx"),
+        nxt_string("4xx"),
+        nxt_string("5xx"),
+    };
 
-    status = nxt_conf_create_object(mp, 3);
+    status = nxt_conf_create_object(mp, 4);
     if (nxt_slow_path(status == NULL)) {
         return NULL;
     }
@@ -57,7 +65,7 @@ nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
     for (i = 0; i < report->apps_count; i++) {
         app = &report->apps[i];
 
-        app_obj = nxt_conf_create_object(mp, 2);
+        app_obj = nxt_conf_create_object(mp, 3);
         if (nxt_slow_path(app_obj == NULL)) {
             return NULL;
         }
@@ -94,6 +102,18 @@ nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
         nxt_conf_set_member_integer(obj, &completed_str, app->completed_requests,
                                     2);
         nxt_conf_set_member_integer(obj, &failed_str, app->failed_requests, 3);
+
+        obj = nxt_conf_create_object(mp, nxt_nitems(response_classes));
+        if (nxt_slow_path(obj == NULL)) {
+            return NULL;
+        }
+
+        nxt_conf_set_member(app_obj, &responses_str, obj, 2);
+
+        for (j = 0; j < nxt_nitems(response_classes); j++) {
+            nxt_conf_set_member_integer(obj, &response_classes[j],
+                                        app->responses[j], j);
+        }
     }
 
     obj = nxt_conf_create_object(mp, 2);
@@ -104,6 +124,18 @@ nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
     nxt_conf_set_member(status, &procs_str, obj, 2);
     nxt_conf_set_member_integer(obj, &busy_str, report->busy_processes, 0);
     nxt_conf_set_member_integer(obj, &idle_str, report->idle_processes, 1);
+
+    obj = nxt_conf_create_object(mp, nxt_nitems(response_classes));
+    if (nxt_slow_path(obj == NULL)) {
+        return NULL;
+    }
+
+    nxt_conf_set_member(status, &responses_str, obj, 3);
+
+    for (j = 0; j < nxt_nitems(response_classes); j++) {
+        nxt_conf_set_member_integer(obj, &response_classes[j],
+                                    report->responses[j], j);
+    }
 
     return status;
 }

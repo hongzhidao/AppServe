@@ -447,6 +447,9 @@ def test_asgi_application_worker_idle():
                     'completed': 4 - active,
                     'failed': 0,
                 },
+                'responses': {
+                    '1xx': 0, '2xx': 4 - active, '3xx': 0, '4xx': 0, '5xx': 0,
+                },
             }:
                 return
             time.sleep(0.05)

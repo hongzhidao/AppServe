@@ -5,6 +5,7 @@
  */
 
 #include <nxt_router.h>
+#include <nxt_router_request.h>
 #include <nxt_http.h>
 #include <nxt_h1proto.h>
 #include <nxt_websocket.h>
@@ -959,18 +960,20 @@ static void
 nxt_h1p_request_header_send(nxt_task_t *task, nxt_http_request_t *r,
     nxt_work_handler_t body_handler, void *data)
 {
-    u_char              *p;
-    size_t              size;
-    nxt_buf_t           *header;
-    nxt_str_t           unknown_status;
-    nxt_int_t           conn;
-    nxt_uint_t          n;
-    nxt_bool_t          http11;
-    nxt_conn_t          *c;
-    nxt_h1proto_t       *h1p;
-    const nxt_str_t     *status;
-    nxt_http_field_t    *field;
-    u_char              buf[UNKNOWN_STATUS_LENGTH];
+    u_char                  *p;
+    size_t                  size;
+    nxt_buf_t               *header;
+    nxt_str_t               unknown_status;
+    nxt_int_t               conn;
+    nxt_uint_t              n;
+    nxt_bool_t              http11;
+    nxt_app_t               *app;
+    nxt_conn_t              *c;
+    nxt_h1proto_t           *h1p;
+    const nxt_str_t         *status;
+    nxt_http_field_t        *field;
+    nxt_request_rpc_data_t  *req_rpc_data;
+    u_char                  buf[UNKNOWN_STATUS_LENGTH];
 
     static const char   chunked[] = "Transfer-Encoding: chunked\r\n";
     static const char   websocket_version[] = "Sec-WebSocket-Version: 13\r\n";
@@ -1017,6 +1020,7 @@ nxt_h1p_request_header_send(nxt_task_t *task, nxt_http_request_t *r,
         status = &unknown_status;
 
     } else {
+        n = NXT_HTTP_INTERNAL_SERVER_ERROR;
         status = &nxt_http_server_error[0];
     }
 
@@ -1121,6 +1125,12 @@ nxt_h1p_request_header_send(nxt_task_t *task, nxt_http_request_t *r,
     header->mem.free = p;
 
     c = h1p->conn;
+
+    req_rpc_data = r->req_rpc_data;
+    if (req_rpc_data != NULL && n >= 100 && n < 600) {
+        app = req_rpc_data->app;
+        app->responses[n / 100 - 1]++;
+    }
 
     c->write = header;
     h1p->conn_write_tail = &header->next;

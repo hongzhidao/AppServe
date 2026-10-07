@@ -46,6 +46,15 @@ def test_status_requests(skip_alert):
                 for field in ('total', 'active', 'completed', 'failed')
             }
             if requests == expected:
+                assert status['applications']['empty']['responses'] == {
+                    '1xx': 0, '2xx': empty, '3xx': 0, '4xx': 0, '5xx': 0,
+                }
+                assert status['applications']['blah']['responses'] == {
+                    '1xx': 0, '2xx': 0, '3xx': 0, '4xx': 0, '5xx': blah,
+                }
+                assert status['responses'] == {
+                    '1xx': 0, '2xx': empty, '3xx': 0, '4xx': 0, '5xx': blah,
+                }
                 return
             time.sleep(0.01)
         assert requests == expected
@@ -109,7 +118,10 @@ def test_status_applications():
         apps = client.conf_get('/status/applications')
         assert sorted(apps) == sorted(expert)
 
-    def check_application(name, busy, idle, active, total=0, max=1, spare=0):
+    def check_application(name, busy, idle, active, total=0, max=1, spare=0,
+                          responses=None):
+        if responses is None:
+            responses = total - active
         expected = {
             'processes': {
                 'max': max,
@@ -122,6 +134,9 @@ def test_status_applications():
                 'active': active,
                 'completed': total - active,
                 'failed': 0,
+            },
+            'responses': {
+                '1xx': 0, '2xx': responses, '3xx': 0, '4xx': 0, '5xx': 0,
             },
         }
         for _ in range(200):
@@ -156,7 +171,7 @@ def test_status_applications():
         start=True,
         read_timeout=1,
     )
-    check_application('delayed', 1, 3, 1, total=1, max=4, spare=4)
+    check_application('delayed', 1, 3, 1, total=1, max=4, spare=4, responses=1)
     sock.close()
 
     # starting
@@ -239,20 +254,33 @@ def test_status_requests_queued():
 
 def test_status_requests_outcomes():
     client.load('request_status')
-    for status in (200, 404, 500):
+    for status in (200, 201, 204, 302, 304, 404, 499, 500, 599):
         assert client.get(headers={
             'Host': 'localhost', 'X-Status': str(status), 'Connection': 'close',
         })['status'] == status
-    expected = {'total': 3, 'active': 0, 'completed': 3, 'failed': 0}
+    expected = {'total': 9, 'active': 0, 'completed': 9, 'failed': 0}
     assert client.conf_get('/status/requests') == expected
     assert client.conf_get('/status/applications/request_status/requests') == expected
+    responses = {'1xx': 0, '2xx': 3, '3xx': 2, '4xx': 2, '5xx': 2}
+    assert client.conf_get('/status/responses') == responses
+    assert client.conf_get('/status/applications/request_status/responses') == responses
+    assert client.conf_get('/status/responses/2xx') == 3
 
     assert client.get(headers={
         'Host': 'localhost', 'X-Invalid-Status': '1', 'Connection': 'close',
     })['status'] == 503
-    expected = {'total': 4, 'active': 0, 'completed': 3, 'failed': 1}
+    expected = {'total': 10, 'active': 0, 'completed': 9, 'failed': 1}
     assert client.conf_get('/status/requests') == expected
     assert client.conf_get('/status/applications/request_status/requests') == expected
+    responses['5xx'] += 1
+    assert client.conf_get('/status/responses') == responses
+    assert client.conf_get('/status/applications/request_status/responses') == responses
+
+    for status in (600, 999):
+        assert client.get(headers={
+            'Host': 'localhost', 'X-Status': str(status), 'Connection': 'close',
+        })['status'] == status
+    assert client.conf_get('/status/responses') == responses
 
 
 def test_status_requests_stream_error():
@@ -265,11 +293,17 @@ def test_status_requests_stream_error():
     assert client.conf_get('/status/requests') == {
         'total': 1, 'active': 0, 'completed': 0, 'failed': 1,
     }
+    assert client.conf_get('/status/responses') == {
+        '1xx': 0, '2xx': 1, '3xx': 0, '4xx': 0, '5xx': 0,
+    }
     assert client.get(headers={
         'Host': 'localhost', 'X-Skip': '9', 'X-Chunked': '1', 'Connection': 'close',
     })['status'] == 200
     assert client.conf_get('/status/requests') == {
         'total': 2, 'active': 0, 'completed': 1, 'failed': 1,
+    }
+    assert client.conf_get('/status/responses') == {
+        '1xx': 0, '2xx': 2, '3xx': 0, '4xx': 0, '5xx': 0,
     }
 
 
@@ -282,6 +316,9 @@ def test_status_requests_timeout():
     assert client.conf_get('/status/requests') == expected
     time.sleep(3)
     assert client.conf_get('/status/requests') == expected, 'late response not counted'
+    assert client.conf_get('/status/responses') == {
+        '1xx': 0, '2xx': 0, '3xx': 0, '4xx': 0, '5xx': 1,
+    }
 
 
 def test_status_requests_cancelled():
@@ -294,6 +331,9 @@ def test_status_requests_cancelled():
         assert client.conf_get('/status/requests') == {
             'total': 1, 'active': 1, 'completed': 0, 'failed': 0,
         }
+        assert client.conf_get('/status/responses') == {
+            '1xx': 0, '2xx': 1, '3xx': 0, '4xx': 0, '5xx': 0,
+        }
     finally:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0))
         sock.close()
@@ -305,10 +345,17 @@ def test_status_requests_cancelled():
             break
         time.sleep(0.01)
     assert requests == expected
+    assert client.conf_get('/status/responses') == {
+        '1xx': 0, '2xx': 1, '3xx': 0, '4xx': 0, '5xx': 0,
+    }
 
 
 def test_status_requests_reconfigure():
     def check_requests(expected):
+        expected_responses = {
+            name: {'1xx': 0, '2xx': app['total'], '3xx': 0, '4xx': 0, '5xx': 0}
+            for name, app in expected.items()
+        }
         for _ in range(200):
             status = client.conf_get('/status')
             requests = {
@@ -319,10 +366,20 @@ def test_status_requests_reconfigure():
                 field: sum(app[field] for app in requests.values())
                 for field in ('total', 'active', 'completed', 'failed')
             }
-            if requests == expected:
+            assert status['responses'] == {
+                field: sum(app['responses'][field]
+                           for app in status['applications'].values())
+                for field in ('1xx', '2xx', '3xx', '4xx', '5xx')
+            }
+            responses = {
+                name: app['responses']
+                for name, app in status['applications'].items()
+            }
+            if requests == expected and responses == expected_responses:
                 return
             time.sleep(0.01)
         assert requests == expected
+        assert responses == expected_responses
 
     apps = {'orders': app_default('delayed'), 'users': app_default()}
     apps['orders']['processes'] = 1
@@ -472,6 +529,10 @@ def test_status_processes_sampling():
         assert 0 <= processes['idle'] <= 4
         assert 0 <= app['requests']['active'] <= 4
         assert status['requests'] == app['requests']
+        assert status['responses'] == app['responses']
+        assert 0 <= app['responses']['2xx'] <= 400
+        for field in ('1xx', '3xx', '4xx', '5xx'):
+            assert app['responses'][field] == 0
         assert status['processes'] == {
             'busy': processes['busy'],
             'idle': processes['idle'],
@@ -494,7 +555,9 @@ def test_status_processes_sampling():
     }
     for _ in range(300):
         app = sample_status()
-        if app == expected:
+        state = {field: app[field] for field in expected}
+        if state == expected:
+            assert app['responses']['2xx'] > 0
             return
         time.sleep(0.01)
-    assert app == expected
+    assert state == expected
