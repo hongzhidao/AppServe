@@ -925,6 +925,8 @@ nxt_router_status_handler(nxt_task_t *task, nxt_port_recv_msg_t *msg)
 
         app_stat->total_requests = app->total_requests;
         app_stat->active_requests = app->active_requests;
+        app_stat->completed_requests = app->completed_requests;
+        app_stat->failed_requests = app->failed_requests;
         app_stat->max_processes = app->max_processes;
         app_stat->spare_processes = app->spare_processes;
         app_stat->busy_processes = (processes > idle) ? processes - idle : 0;
@@ -932,6 +934,8 @@ nxt_router_status_handler(nxt_task_t *task, nxt_port_recv_msg_t *msg)
 
         report->total_requests += app_stat->total_requests;
         report->active_requests += app_stat->active_requests;
+        report->completed_requests += app_stat->completed_requests;
+        report->failed_requests += app_stat->failed_requests;
         report->busy_processes += app_stat->busy_processes;
         report->idle_processes += app_stat->idle_processes;
 
@@ -3388,6 +3392,10 @@ nxt_router_response_ready_handler(nxt_task_t *task, nxt_port_recv_msg_t *msg,
 
     req_rpc_data = data;
 
+    if (msg->port_msg.last != 0) {
+        req_rpc_data->rpc_cancel = 0;
+    }
+
     r = req_rpc_data->request;
     if (nxt_slow_path(r == NULL)) {
         return;
@@ -3409,37 +3417,32 @@ nxt_router_response_ready_handler(nxt_task_t *task, nxt_port_recv_msg_t *msg,
 
     b = (msg->size == 0) ? NULL : msg->buf;
 
-    if (msg->port_msg.last != 0) {
-        nxt_debug(task, "router data create last buf");
-
-        nxt_buf_chain_add(&b, nxt_http_buf_last(r));
-
-        req_rpc_data->rpc_cancel = 0;
-
-        if (req_rpc_data->apr_action == NXT_APR_REQUEST_FAILED) {
-            req_rpc_data->apr_action = NXT_APR_GOT_RESPONSE;
-        }
-
-        nxt_request_rpc_data_unlink(task, req_rpc_data);
-
-    } else {
-        if (app->timeout != 0) {
-            r->timer.handler = nxt_router_app_timeout;
-            r->timer_data = req_rpc_data;
-            nxt_timer_add(task->thread->engine, &r->timer, app->timeout);
-        }
+    if (msg->port_msg.last == 0 && app->timeout != 0) {
+        r->timer.handler = nxt_router_app_timeout;
+        r->timer_data = req_rpc_data;
+        nxt_timer_add(task->thread->engine, &r->timer, app->timeout);
     }
 
     if (b == NULL) {
-        return;
-    }
+        if (msg->port_msg.last != 0) {
+            if (nxt_slow_path(!r->header_sent)) {
+                goto fail;
+            }
 
-    if (msg->buf == b) {
-        /* Disable instant buffer completion/re-using by port. */
-        msg->buf = NULL;
+            nxt_buf_chain_add(&r->out, nxt_http_buf_last(r));
+            nxt_http_request_send_body(task, r, NULL);
+        }
+
+        goto done;
     }
 
     if (r->header_sent) {
+        msg->buf = NULL;
+
+        if (msg->port_msg.last != 0) {
+            nxt_buf_chain_add(&b, nxt_http_buf_last(r));
+        }
+
         nxt_buf_chain_add(&r->out, b);
         nxt_http_request_send_body(task, r, NULL);
 
@@ -3499,6 +3502,13 @@ nxt_router_response_ready_handler(nxt_task_t *task, nxt_port_recv_msg_t *msg,
 
         r->status = resp->status;
 
+        /* Disable instant buffer completion/re-using by port. */
+        msg->buf = NULL;
+
+        if (msg->port_msg.last != 0) {
+            nxt_buf_chain_add(&b, nxt_http_buf_last(r));
+        }
+
         if (resp->piggyback_content_length != 0) {
             b->mem.pos = nxt_unit_sptr_get(&resp->piggyback_content);
             b->mem.free = b->mem.pos + resp->piggyback_content_length;
@@ -3523,6 +3533,10 @@ nxt_router_response_ready_handler(nxt_task_t *task, nxt_port_recv_msg_t *msg,
 
         nxt_http_request_header_send(task, r, nxt_http_request_send_body, NULL);
 
+        if (nxt_slow_path(r->error)) {
+            goto fail;
+        }
+
         if (r->websocket_handshake
             && r->status == NXT_HTTP_SWITCHING_PROTOCOLS)
         {
@@ -3543,6 +3557,16 @@ nxt_router_response_ready_handler(nxt_task_t *task, nxt_port_recv_msg_t *msg,
         } else {
             r->state = &nxt_http_request_send_state;
         }
+    }
+
+done:
+
+    if (msg->port_msg.last != 0) {
+        if (!r->error && req_rpc_data->apr_action == NXT_APR_REQUEST_FAILED) {
+            req_rpc_data->apr_action = NXT_APR_GOT_RESPONSE;
+        }
+
+        nxt_request_rpc_data_unlink(task, req_rpc_data);
     }
 
     return;
@@ -4255,6 +4279,8 @@ nxt_router_app_request_release(nxt_task_t *task, nxt_app_t *app, nxt_port_t *por
         nxt_thread_mutex_lock(&app->mutex);
 
         app->active_requests -= got_response + dec_requests;
+        app->completed_requests += got_response;
+        app->failed_requests += dec_requests;
 
         nxt_thread_mutex_unlock(&app->mutex);
 
@@ -4268,6 +4294,8 @@ nxt_router_app_request_release(nxt_task_t *task, nxt_app_t *app, nxt_port_t *por
 
     app_process->active_requests -= got_response + dec_requests;
     app->active_requests -= got_response + dec_requests;
+    app->completed_requests += got_response;
+    app->failed_requests += dec_requests;
 
     if (action == NXT_APR_UPGRADE) {
         app_process->active_websockets++;

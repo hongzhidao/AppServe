@@ -103,6 +103,39 @@ def test_respawn_application(skip_alert, unit_pid):
 
     smoke_test(unit_pid)
 
+def test_respawn_application_inflight_failed(skip_alert, unit_pid):
+    client.app_name += '-failed'
+    client.load('single_thread', client.app_name, processes=1)
+    sock = client.get(headers={
+        'Host': 'localhost', 'X-Delay': '5', 'Connection': 'close',
+    }, no_recv=True)
+    try:
+        for _ in range(100):
+            status = client.conf_get('/status/applications/' + client.app_name)
+            if (status['requests']['active'] == 1
+                    and status['processes']['idle'] == 0):
+                break
+            time.sleep(0.01)
+        assert status['requests']['active'] == 1
+        assert status['processes']['idle'] == 0
+
+        pid = pid_by_name(client.app_name, unit_pid)
+        assert pid is not None
+        skip_alert(r'process %s exited on signal 9' % pid)
+        kill_pids(pid)
+        assert client._resp_to_dict(client.recvall(sock).decode())['status'] == 503
+    finally:
+        sock.close()
+
+    assert client.conf_get('/status/requests') == {
+        'total': 1, 'active': 0, 'completed': 0, 'failed': 1,
+    }
+    assert client.get()['status'] == 200
+    assert client.conf_get('/status/requests') == {
+        'total': 2, 'active': 0, 'completed': 1, 'failed': 1,
+    }
+
+
 def test_respawn_application_inflight_removed(skip_alert, unit_pid):
     client.load('single_thread', client.app_name, processes=1)
 

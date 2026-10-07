@@ -441,7 +441,12 @@ def test_asgi_application_worker_idle():
                     'busy': running - idle,
                     'idle': idle,
                 },
-                'requests': {'total': 4, 'active': active},
+                'requests': {
+                    'total': 4,
+                    'active': active,
+                    'completed': 4 - active,
+                    'failed': 0,
+                },
             }:
                 return
             time.sleep(0.05)
@@ -485,6 +490,8 @@ def test_asgi_application_worker_idle():
         assert client.conf_get('/status/applications/single_thread/requests') == {
             'total': 5,
             'active': 0,
+            'completed': 5,
+            'failed': 0,
         }
     finally:
         for sock in socks:

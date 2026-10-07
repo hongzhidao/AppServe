@@ -116,7 +116,7 @@ def test_asgi_websockets_worker_idle():
                     'busy': running - idle,
                     'idle': idle,
                 },
-                'requests': {'total': 2, 'active': 0},
+                'requests': {'total': 2, 'active': 0, 'completed': 2, 'failed': 0},
             }:
                 return
             time.sleep(0.05)

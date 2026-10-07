@@ -61,7 +61,8 @@ their event loop.
 
 Query the `/status` API for server and application runtime statistics:
 
-- Total and active application requests, per application and in total.
+- Total, active, completed, and failed application requests, per application
+  and in total.
 - Busy and idle application workers, per application and in total.
 
 Read `/status/applications/<name>/processes` for an application's worker-pool
@@ -93,14 +94,24 @@ applications' worker pools shown in the same status response. An application's
 previous configuration, or a deleted application, may still have draining
 workers; those old pools are outside this response.
 
-`/status/applications/<name>/requests` returns `total` and `active`. A request
-counts toward `total` when it enters the application's request queue, including
-requests that later fail. `active` includes queued requests and requests awaiting
-an application response. A WebSocket upgrade counts once; subsequent frames
-do not count as requests, and an upgraded session is no longer an active request.
-Requests rejected before entering an application are not counted.
+`/status/applications/<name>/requests` returns `total`, `active`, `completed`,
+and `failed`:
 
-`/status/requests` sums `total` and `active` from the applications in the same
+- `total` counts requests entering the application's request queue.
+- `active` includes queued requests and requests awaiting an application response.
+- `completed` counts complete, valid application responses, including normal
+  HTTP 4xx/5xx responses, and successful WebSocket upgrades.
+- `failed` counts requests ending without a complete, valid application response,
+  including startup failures, timeouts, worker exits, response errors, and
+  cancellations before completion.
+
+A WebSocket upgrade counts once; subsequent frames and session closure do not
+count as requests, and an upgraded session is no longer an active request.
+Completion describes application processing, not delivery to the client.
+Requests rejected before entering an application are not counted. At rest,
+`total = active + completed + failed`; independent samples can briefly differ.
+
+`/status/requests` sums all four fields from the applications in the same
 status response. Counters belong to each application configuration instance:
 replacing an application's configuration resets its counters, and deleting it
 removes its counters from the totals. Listener-only changes and worker restarts

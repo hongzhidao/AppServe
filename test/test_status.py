@@ -1,3 +1,5 @@
+import socket
+import struct
 import time
 from concurrent.futures import ThreadPoolExecutor
 
@@ -30,8 +32,8 @@ def test_status_requests(skip_alert):
 
     def check_requests(empty, blah=0):
         expected = {
-            'empty': {'total': empty, 'active': 0},
-            'blah': {'total': blah, 'active': 0},
+            'empty': {'total': empty, 'active': 0, 'completed': empty, 'failed': 0},
+            'blah': {'total': blah, 'active': 0, 'completed': 0, 'failed': blah},
         }
         for _ in range(200):
             status = client.conf_get('/status')
@@ -41,7 +43,7 @@ def test_status_requests(skip_alert):
             }
             assert status['requests'] == {
                 field: sum(app[field] for app in requests.values())
-                for field in ('total', 'active')
+                for field in ('total', 'active', 'completed', 'failed')
             }
             if requests == expected:
                 return
@@ -115,7 +117,12 @@ def test_status_applications():
                 'busy': busy,
                 'idle': idle,
             },
-            'requests': {'total': total, 'active': active},
+            'requests': {
+                'total': total,
+                'active': active,
+                'completed': total - active,
+                'failed': 0,
+            },
         }
         for _ in range(200):
             status = client.conf_get(f'/status/applications/{name}')
@@ -208,10 +215,14 @@ def test_status_requests_queued():
         for _ in range(100):
             status = client.conf_get('/status')
             app = status['applications']['restart']
-            if app['requests'] == {'total': 2, 'active': 2}:
+            if app['requests'] == {
+                'total': 2, 'active': 2, 'completed': 0, 'failed': 0,
+            }:
                 break
             time.sleep(0.01)
-        assert app['requests'] == {'total': 2, 'active': 2}
+        assert app['requests'] == {
+            'total': 2, 'active': 2, 'completed': 0, 'failed': 0,
+        }
         assert app['processes']['busy'] == 0, 'requests queued before worker start'
         assert status['requests'] == app['requests']
 
@@ -221,7 +232,79 @@ def test_status_requests_queued():
         for sock in socks:
             sock.close()
 
-    assert client.conf_get('/status/requests') == {'total': 2, 'active': 0}
+    assert client.conf_get('/status/requests') == {
+        'total': 2, 'active': 0, 'completed': 2, 'failed': 0,
+    }
+
+
+def test_status_requests_outcomes():
+    client.load('request_status')
+    for status in (200, 404, 500):
+        assert client.get(headers={
+            'Host': 'localhost', 'X-Status': str(status), 'Connection': 'close',
+        })['status'] == status
+    expected = {'total': 3, 'active': 0, 'completed': 3, 'failed': 0}
+    assert client.conf_get('/status/requests') == expected
+    assert client.conf_get('/status/applications/request_status/requests') == expected
+
+    assert client.get(headers={
+        'Host': 'localhost', 'X-Invalid-Status': '1', 'Connection': 'close',
+    })['status'] == 503
+    expected = {'total': 4, 'active': 0, 'completed': 3, 'failed': 1}
+    assert client.conf_get('/status/requests') == expected
+    assert client.conf_get('/status/applications/request_status/requests') == expected
+
+
+def test_status_requests_stream_error():
+    client.load('iter_exception')
+    response = client.get(headers={
+        'Host': 'localhost', 'X-Skip': '2', 'X-Chunked': '1', 'Connection': 'close',
+    }, raw_resp=True)
+    if response:
+        assert response[-5:] != '0\r\n\r\n', 'response body incomplete'
+    assert client.conf_get('/status/requests') == {
+        'total': 1, 'active': 0, 'completed': 0, 'failed': 1,
+    }
+    assert client.get(headers={
+        'Host': 'localhost', 'X-Skip': '9', 'X-Chunked': '1', 'Connection': 'close',
+    })['status'] == 200
+    assert client.conf_get('/status/requests') == {
+        'total': 2, 'active': 0, 'completed': 1, 'failed': 1,
+    }
+
+
+def test_status_requests_timeout():
+    client.load('single_thread', processes=1, limits={'timeout': 1})
+    assert client.get(headers={
+        'Host': 'localhost', 'X-Delay': '3', 'Connection': 'close',
+    })['status'] == 503
+    expected = {'total': 1, 'active': 0, 'completed': 0, 'failed': 1}
+    assert client.conf_get('/status/requests') == expected
+    time.sleep(3)
+    assert client.conf_get('/status/requests') == expected, 'late response not counted'
+
+
+def test_status_requests_cancelled():
+    client.load('request_status')
+    response, sock = client.get(headers={
+        'Host': 'localhost', 'X-Delay': '2', 'Connection': 'close',
+    }, start=True, raw_resp=True, read_timeout=0.1)
+    try:
+        assert 'ready' in response
+        assert client.conf_get('/status/requests') == {
+            'total': 1, 'active': 1, 'completed': 0, 'failed': 0,
+        }
+    finally:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0))
+        sock.close()
+
+    expected = {'total': 1, 'active': 0, 'completed': 0, 'failed': 1}
+    for _ in range(300):
+        requests = client.conf_get('/status/requests')
+        if requests == expected:
+            break
+        time.sleep(0.01)
+    assert requests == expected
 
 
 def test_status_requests_reconfigure():
@@ -234,7 +317,7 @@ def test_status_requests_reconfigure():
             }
             assert status['requests'] == {
                 field: sum(app[field] for app in requests.values())
-                for field in ('total', 'active')
+                for field in ('total', 'active', 'completed', 'failed')
             }
             if requests == expected:
                 return
@@ -259,15 +342,15 @@ def test_status_requests_reconfigure():
         for _ in range(2):
             assert client.get(port=8081)['status'] == 200
         check_requests({
-            'orders': {'total': 1, 'active': 1},
-            'users': {'total': 2, 'active': 0},
+            'orders': {'total': 1, 'active': 1, 'completed': 0, 'failed': 0},
+            'users': {'total': 2, 'active': 0, 'completed': 2, 'failed': 0},
         })
 
         apps['orders']['environment'] = {'REVISION': '2'}
         assert 'success' in client.conf(apps['orders'], 'applications/orders')
         check_requests({
-            'orders': {'total': 0, 'active': 0},
-            'users': {'total': 2, 'active': 0},
+            'orders': {'total': 0, 'active': 0, 'completed': 0, 'failed': 0},
+            'users': {'total': 2, 'active': 0, 'completed': 2, 'failed': 0},
         })
         assert client._resp_to_dict(client.recvall(sock).decode())['status'] == 200
     finally:
@@ -278,18 +361,20 @@ def test_status_requests_reconfigure():
         {'pass': 'applications/users'}, 'listeners/*:8080'
     )
     check_requests({
-        'orders': {'total': 0, 'active': 0},
-        'users': {'total': 2, 'active': 0},
+        'orders': {'total': 0, 'active': 0, 'completed': 0, 'failed': 0},
+        'users': {'total': 2, 'active': 0, 'completed': 2, 'failed': 0},
     })
     assert client.get()['status'] == 200
     check_requests({
-        'orders': {'total': 0, 'active': 0},
-        'users': {'total': 3, 'active': 0},
+        'orders': {'total': 0, 'active': 0, 'completed': 0, 'failed': 0},
+        'users': {'total': 3, 'active': 0, 'completed': 3, 'failed': 0},
     })
 
     assert 'success' in client.conf({}, 'listeners')
     assert 'success' in client.conf_delete('applications/users')
-    check_requests({'orders': {'total': 0, 'active': 0}})
+    check_requests({
+        'orders': {'total': 0, 'active': 0, 'completed': 0, 'failed': 0},
+    })
     assert 'success' in client.conf_delete('applications/orders')
     check_requests({})
 
@@ -405,7 +490,7 @@ def test_status_processes_sampling():
 
     expected = {
         'processes': {'max': 4, 'spare': 0, 'busy': 0, 'idle': 0},
-        'requests': {'total': 400, 'active': 0},
+        'requests': {'total': 400, 'active': 0, 'completed': 400, 'failed': 0},
     }
     for _ in range(300):
         app = sample_status()

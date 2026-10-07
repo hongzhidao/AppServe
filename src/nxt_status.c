@@ -20,6 +20,8 @@ nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
     static nxt_str_t active_str = nxt_string("active");
     static nxt_str_t reqs_str = nxt_string("requests");
     static nxt_str_t total_str = nxt_string("total");
+    static nxt_str_t completed_str = nxt_string("completed");
+    static nxt_str_t failed_str = nxt_string("failed");
     static nxt_str_t apps_str = nxt_string("applications");
     static nxt_str_t procs_str = nxt_string("processes");
     static nxt_str_t max_str = nxt_string("max");
@@ -32,7 +34,7 @@ nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
         return NULL;
     }
 
-    obj = nxt_conf_create_object(mp, 2);
+    obj = nxt_conf_create_object(mp, 4);
     if (nxt_slow_path(obj == NULL)) {
         return NULL;
     }
@@ -41,6 +43,9 @@ nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
 
     nxt_conf_set_member_integer(obj, &total_str, report->total_requests, 0);
     nxt_conf_set_member_integer(obj, &active_str, report->active_requests, 1);
+    nxt_conf_set_member_integer(obj, &completed_str, report->completed_requests,
+                                2);
+    nxt_conf_set_member_integer(obj, &failed_str, report->failed_requests, 3);
 
     apps = nxt_conf_create_object(mp, report->apps_count);
     if (nxt_slow_path(apps == NULL)) {
@@ -77,7 +82,7 @@ nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
         nxt_conf_set_member_integer(obj, &busy_str, app->busy_processes, 2);
         nxt_conf_set_member_integer(obj, &idle_str, app->idle_processes, 3);
 
-        obj = nxt_conf_create_object(mp, 2);
+        obj = nxt_conf_create_object(mp, 4);
         if (nxt_slow_path(obj == NULL)) {
             return NULL;
         }
@@ -86,6 +91,9 @@ nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
 
         nxt_conf_set_member_integer(obj, &total_str, app->total_requests, 0);
         nxt_conf_set_member_integer(obj, &active_str, app->active_requests, 1);
+        nxt_conf_set_member_integer(obj, &completed_str, app->completed_requests,
+                                    2);
+        nxt_conf_set_member_integer(obj, &failed_str, app->failed_requests, 3);
     }
 
     obj = nxt_conf_create_object(mp, 2);
