@@ -1,4 +1,38 @@
 
+Changes with AppServe 0.3.0                                      07 Oct 2026
+
+    *) Change: application request handling uses one thread per worker
+       process; threads and thread_stack_size configuration and Ruby thread
+       hooks are removed.
+
+    *) Change: libunit and Go request handling are simplified to use one
+       thread; worker process state is separated from ports.
+
+    *) Feature: configuration API responses include application startup
+       error details.
+
+    *) Feature: status reports worker pool max, spare, busy, and idle
+       counts; connection statistics and running and starting worker fields
+       are removed.
+
+    *) Feature: application and global status report total, active, queued,
+       completed, and failed requests, response status classes, and request
+       latency in milliseconds.
+
+    *) Feature: request latency statistics include approximate cumulative
+       P95 and P99 percentiles; global percentiles use merged application
+       latency samples.
+
+    *) Feature: application and global process statistics count abnormal
+       worker exits; normal recycling and prototype exits are excluded.
+
+    *) Bugfix: thread startup, configuration mapping alignment, MurmurHash2
+       shifts, and empty-string formatting are corrected.
+
+    *) Change: README documentation describes features and quick start; the
+       migration guide and packaging references are removed.
+
+
 Changes with AppServe 0.2.0                                      05 Oct 2026
 
     *) Change: Java, Node.js, and Perl application support and related

@@ -5,6 +5,75 @@
 <change_log title="appserve">
 
 
+<changes apply="*" ver="0.3.0" rev="1"
+         date="2026-10-07" time="11:10:00 +0000"
+         packager="Zhidao HONG &lt;hongzhidao@gmail.com&gt;">
+
+<change type="change">
+<para>
+application request handling uses one thread per worker process;
+threads and thread_stack_size configuration and Ruby thread hooks are removed.
+</para>
+</change>
+
+<change type="change">
+<para>
+libunit and Go request handling are simplified to use one thread;
+worker process state is separated from ports.
+</para>
+</change>
+
+<change type="feature">
+<para>
+configuration API responses include application startup error details.
+</para>
+</change>
+
+<change type="feature">
+<para>
+status reports worker pool max, spare, busy, and idle counts;
+connection statistics and running and starting worker fields are removed.
+</para>
+</change>
+
+<change type="feature">
+<para>
+application and global status report total, active, queued, completed, and
+failed requests, response status classes, and request latency in milliseconds.
+</para>
+</change>
+
+<change type="feature">
+<para>
+request latency statistics include approximate cumulative P95 and P99
+percentiles; global percentiles use merged application latency samples.
+</para>
+</change>
+
+<change type="feature">
+<para>
+application and global process statistics count abnormal worker exits;
+normal recycling and prototype exits are excluded.
+</para>
+</change>
+
+<change type="bugfix">
+<para>
+thread startup, configuration mapping alignment, MurmurHash2 shifts,
+and empty-string formatting are corrected.
+</para>
+</change>
+
+<change type="change">
+<para>
+README documentation describes features and quick start;
+the migration guide and packaging references are removed.
+</para>
+</change>
+
+</changes>
+
+
 <changes apply="*" ver="0.2.0" rev="1"
          date="2026-10-05" time="22:56:59 +0000"
          packager="Zhidao HONG &lt;hongzhidao@gmail.com&gt;">

@@ -1,3 +1,90 @@
+# AppServe 0.3.0
+
+Release date: October 7, 2026. Git tag: `0.3`.
+
+AppServe 0.3.0 simplifies application workers and expands application-level
+observability. Python, PHP, Ruby, Go, and external applications remain supported.
+
+## Changes
+
+- Application request handling uses one thread per worker process. Python and
+  Ruby `threads` and `thread_stack_size` configuration and Ruby thread hooks are
+  removed. WSGI, Ruby, Go, and external request handlers execute on the worker
+  thread; ASGI retains asynchronous concurrency within its event loop.
+- Simplified `libunit` and Go request handling, including shared-memory flow
+  control and shutdown behavior. The Go binding no longer starts request-handler
+  or receiver goroutines.
+- Separated application process state from ports and moved router state into
+  thread contexts. In-flight HTTP and WebSocket requests retain worker context
+  after application removal or worker detachment.
+- Configuration API responses include application startup error details.
+- Application status reports worker-pool `max`, `spare`, `busy`, `idle`, and
+  `crash`; global process status sums `busy`, `idle`, and `crash`. The old
+  `running`, `starting`, and connection statistics are removed. `crash` counts
+  workers exiting on a signal or with a nonzero exit code; normal recycling,
+  application restarts, and prototype exits are excluded.
+- Application and global request statistics report `total`, `active`, `queued`,
+  `completed`, and `failed`. `queued` is the subset of active requests waiting
+  for a worker to acknowledge receipt, including startup and acknowledgement
+  delivery time. Completed requests include valid application responses
+  regardless of HTTP status and successful WebSocket upgrades; failed requests
+  include processing errors, timeouts, and cancellations.
+- Response statistics group headers by `1xx` through `5xx`, including AppServe
+  error responses after a request enters an application.
+- Latency statistics report `sum`, `avg`, `max`, `p95`, and `p99` in integer
+  milliseconds, from application queue entry until completion or failure.
+  Percentiles are approximate cumulative values from fixed-size latency buckets;
+  global percentiles use merged application samples. Fragmented status reports
+  support the larger snapshots. WebSocket sessions are timed only until upgrade.
+  Statistics are approximate; counters belong to the current application
+  configuration instance.
+- Corrected thread startup, configuration mapping alignment, MurmurHash2
+  shifts, and empty-string formatting.
+- Expanded the README with features and quick-start instructions. Removed the
+  migration guide and its packaging references; container documentation links
+  now point to the README.
+
+Existing configurations using removed application thread options are rejected.
+Rebuild language modules and external applications against the deployed version.
+Use multiple worker processes for parallel synchronous request handling.
+
+## Verification
+
+Original release verification on Linux aarch64 with GCC 13.3.0,
+Python 3.12.3, and Go 1.22.2:
+
+- The daemon, Python module, Go binding, and C test programs built successfully.
+- C tests and the UTF-8 filename test passed, including thread startup,
+  configuration mapping, MurmurHash2, formatting, and Forwarded parser coverage.
+- The full regression suite in default mode passed: **473 passed, 126 skipped**.
+  This includes Python/ASGI, WebSocket, Go, configuration, HTTP, Forwarded,
+  process management, isolation, status, respawn, and log rotation tests.
+  Tests ran in a separate network namespace to avoid occupied host ports.
+- Installation and uninstallation passed for the daemon, manpage, Python
+  module, `libunit`, headers, and pkg-config file.
+- The XML changelog validated and generated text, Debian, and RPM changelogs
+  were checked.
+- An extracted source distribution built successfully and passed the C tests
+  and UTF-8 filename test.
+
+PHP and Ruby modules, Docker images, and Debian/RPM binary packages were not
+built as part of this release verification.
+
+Additional verification for the expanded 0.3.0 status features on Linux aarch64
+with GCC 13.3.0 and Python 3.12.3:
+
+- The daemon, Python module, and C test programs built successfully with debug
+  assertions enabled.
+- C tests passed, including latency bucket boundaries, percentile ranks, and
+  aggregation; the UTF-8 filename test passed.
+- Status, respawn, ASGI application, and ASGI WebSocket regressions passed in
+  default mode: **80 passed, 7 skipped**. Tests ran in a separate network
+  namespace. Coverage includes queued requests, startup failures, cumulative
+  P95/P99 latency, fragmented reports, abnormal worker exits, normal recycling,
+  configuration lifetime, timeouts, cancellations, and WebSocket upgrades.
+- The XML changelog validated; generated text, Debian, and RPM changelogs were
+  checked.
+
 # AppServe 0.2.0
 
 Release date: October 5, 2026.

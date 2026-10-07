@@ -343,8 +343,7 @@ sudo curl --unix-socket /usr/local/appserve/control.appserve.sock \
 - Release history: [CHANGES](CHANGES)
 - Release notes and verification details: [docs/release-notes.md](docs/release-notes.md)
 
-The repository is currently private; access is required to view the source,
-report issues, and contribute changes.
+Contributions and issue reports are welcome.
 
 ## License
 
