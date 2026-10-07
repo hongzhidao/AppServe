@@ -76,6 +76,7 @@ typedef struct {
     nxt_array_t            *threads;
     nxt_router_conf_t      *router_conf;
     nxt_mp_t               *mem_pool;
+    nxt_buf_t              *error;
 } nxt_router_temp_conf_t;
 
 

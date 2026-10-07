@@ -1,5 +1,7 @@
 import json
+import re
 import socket
+from urllib.parse import quote
 
 import pytest
 from unit.control import Control
@@ -264,6 +266,63 @@ def test_applications_unknown_type():
     assert 'error' in result, 'unknown application type'
     assert 'not found' in result['detail'], 'unavailable application module'
     assert client.conf_get() == before, 'configuration unchanged'
+
+@pytest.mark.parametrize('stage', ['prototype', 'application'])
+@pytest.mark.parametrize('name', ['hello', 'app "quoted"\\路径'])
+@pytest.mark.parametrize('whole_conf', [False, True])
+def test_application_start_error_detail(
+    stage, name, whole_conf, skip_alert, wait_for_record
+):
+    skip_alert(r'failed to apply new conf', r'Python failed to import module')
+
+    assert 'success' in try_addr('*:8080')
+    assert client.get()['status'] == 200
+    before = client.conf_get()
+
+    app = {
+        'type': 'python',
+        'processes': 1,
+        'path': option.test_dir + '/python/empty',
+        'module': 'wsgi',
+    }
+
+    if stage == 'prototype':
+        app['working_directory'] = option.temp_dir + '/missing-directory'
+    else:
+        app['module'] = 'missing_appserve_test_module'
+
+    path = 'applications/' + quote(name, '')
+
+    if whole_conf:
+        result = client.conf(
+            {
+                **before,
+                'applications': {**before['applications'], name: app},
+            }
+        )
+    else:
+        result = client.conf(app, path)
+
+    detail = f'failed to start {stage} "{name}"'
+    assert result == {
+        'error': 'Failed to apply new configuration.',
+        'detail': detail,
+    }
+
+    record = wait_for_record(
+        r'\[warn\] \d+#\d+ (' + re.escape(detail) + r')$'
+    )
+    assert record is not None, 'startup error logged'
+    assert record.group(1) == result['detail'], 'detail matches error log'
+    assert client.conf_get() == before, 'configuration rolled back'
+    assert client.get()['status'] == 200, 'original application still works'
+
+    app.pop('working_directory', None)
+    app['module'] = 'wsgi'
+
+    result = client.conf(app, path)
+    assert result == {'success': 'Reconfiguration done.'}, 'creation recovered'
+    assert client.conf_get(path) == app
 
 def test_applications_miss_quote():
     assert 'error' in client.conf(

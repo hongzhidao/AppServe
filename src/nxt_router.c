@@ -83,6 +83,8 @@ static void nxt_router_remove_pid_handler(nxt_task_t *task,
 static nxt_router_temp_conf_t *nxt_router_temp_conf(nxt_task_t *task);
 static void nxt_router_conf_ready(nxt_task_t *task,
     nxt_router_temp_conf_t *tmcf);
+static void nxt_router_conf_error_set(nxt_task_t *task,
+    nxt_router_temp_conf_t *tmcf, nxt_uint_t level, const char *fmt, ...);
 static void nxt_router_conf_send(nxt_task_t *task,
     nxt_router_temp_conf_t *tmcf, nxt_port_msg_type_t type);
 
@@ -1206,7 +1208,8 @@ nxt_router_conf_error(nxt_task_t *task, nxt_router_temp_conf_t *tmcf)
     nxt_socket_conf_t  *skcf;
     nxt_router_conf_t  *rtcf;
 
-    nxt_alert(task, "failed to apply new conf");
+    nxt_router_conf_error_set(task, tmcf, NXT_LOG_ALERT,
+                              "failed to apply new conf");
 
     for (qlk = nxt_queue_first(&creating_sockets);
          qlk != nxt_queue_tail(&creating_sockets);
@@ -1248,14 +1251,55 @@ nxt_router_conf_error(nxt_task_t *task, nxt_router_temp_conf_t *tmcf)
 
 
 static void
+nxt_router_conf_error_set(nxt_task_t *task, nxt_router_temp_conf_t *tmcf,
+    nxt_uint_t level, const char *fmt, ...)
+{
+    va_list    args;
+    nxt_str_t  error;
+    nxt_buf_t  *b;
+    u_char     msg[NXT_MAX_ERROR_STR];
+
+    error.start = msg;
+
+    va_start(args, fmt);
+    error.length = nxt_vsprintf(msg, msg + sizeof(msg), fmt, args) - msg;
+    va_end(args);
+
+    nxt_log(task, level, "%V", &error);
+
+    if (tmcf->error != NULL) {
+        return;
+    }
+
+    b = nxt_buf_mem_ts_alloc(task, tmcf->port->mem_pool, error.length);
+    if (nxt_slow_path(b == NULL)) {
+        return;
+    }
+
+    nxt_buf_cpystr(b, &error);
+
+    tmcf->error = b;
+}
+
+
+static void
 nxt_router_conf_send(nxt_task_t *task, nxt_router_temp_conf_t *tmcf,
     nxt_port_msg_type_t type)
 {
-    nxt_port_socket_write(task, tmcf->port, type, -1, tmcf->stream, 0, NULL);
+    nxt_int_t  ret;
+    nxt_buf_t  *b;
+
+    b = (type == NXT_PORT_MSG_RPC_ERROR) ? tmcf->error : NULL;
+
+    ret = nxt_port_socket_write(task, tmcf->port, type, -1, tmcf->stream, 0, b);
+    if (nxt_slow_path(ret != NXT_OK && b != NULL)) {
+        b->completion_handler(task, b, b->parent);
+    }
 
     nxt_port_use(task, tmcf->port, -1);
 
     tmcf->port = NULL;
+    tmcf->error = NULL;
 }
 
 
@@ -2494,12 +2538,14 @@ nxt_router_app_prefork_error(nxt_task_t *task, nxt_port_recv_msg_t *msg,
     tmcf = rpc->temp_conf;
 
     if (rpc->proto) {
-        nxt_log(task, NXT_LOG_WARN, "failed to start prototype \"%V\"",
-                &app->name);
+        nxt_router_conf_error_set(task, tmcf, NXT_LOG_WARN,
+                                  "failed to start prototype \"%V\"",
+                                  &app->name);
 
     } else {
-        nxt_log(task, NXT_LOG_WARN, "failed to start application \"%V\"",
-                &app->name);
+        nxt_router_conf_error_set(task, tmcf, NXT_LOG_WARN,
+                                  "failed to start application \"%V\"",
+                                  &app->name);
 
         app->pending_processes--;
     }
