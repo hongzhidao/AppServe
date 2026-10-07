@@ -435,7 +435,12 @@ def test_asgi_application_worker_idle():
         for _ in range(100):
             state = client.conf_get('/status/applications/single_thread')
             if state == {
-                'processes': {'running': running, 'starting': 0, 'idle': idle},
+                'processes': {
+                    'max': 1,
+                    'spare': 0,
+                    'busy': running - idle,
+                    'idle': idle,
+                },
                 'requests': {'active': active},
             }:
                 return

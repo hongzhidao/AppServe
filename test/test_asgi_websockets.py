@@ -110,7 +110,12 @@ def test_asgi_websockets_worker_idle():
         for _ in range(100):
             state = client.conf_get('/status/applications/websockets%2Fmirror')
             if state == {
-                'processes': {'running': running, 'starting': 0, 'idle': idle},
+                'processes': {
+                    'max': 1,
+                    'spare': 0,
+                    'busy': running - idle,
+                    'idle': idle,
+                },
                 'requests': {'active': 0},
             }:
                 return

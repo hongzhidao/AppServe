@@ -18,15 +18,16 @@ nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
     nxt_conf_value_t  *status, *obj, *apps, *app_obj;
 
     static nxt_str_t active_str = nxt_string("active");
-    static nxt_str_t idle_str = nxt_string("idle");
     static nxt_str_t reqs_str = nxt_string("requests");
     static nxt_str_t total_str = nxt_string("total");
     static nxt_str_t apps_str = nxt_string("applications");
     static nxt_str_t procs_str = nxt_string("processes");
-    static nxt_str_t run_str = nxt_string("running");
-    static nxt_str_t start_str = nxt_string("starting");
+    static nxt_str_t max_str = nxt_string("max");
+    static nxt_str_t spare_str = nxt_string("spare");
+    static nxt_str_t busy_str = nxt_string("busy");
+    static nxt_str_t idle_str = nxt_string("idle");
 
-    status = nxt_conf_create_object(mp, 2);
+    status = nxt_conf_create_object(mp, 3);
     if (nxt_slow_path(status == NULL)) {
         return NULL;
     }
@@ -63,16 +64,17 @@ nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
             return NULL;
         }
 
-        obj = nxt_conf_create_object(mp, 3);
+        obj = nxt_conf_create_object(mp, 4);
         if (nxt_slow_path(obj == NULL)) {
             return NULL;
         }
 
         nxt_conf_set_member(app_obj, &procs_str, obj, 0);
 
-        nxt_conf_set_member_integer(obj, &run_str, app->processes, 0);
-        nxt_conf_set_member_integer(obj, &start_str, app->pending_processes, 1);
-        nxt_conf_set_member_integer(obj, &idle_str, app->idle_processes, 2);
+        nxt_conf_set_member_integer(obj, &max_str, app->max_processes, 0);
+        nxt_conf_set_member_integer(obj, &spare_str, app->spare_processes, 1);
+        nxt_conf_set_member_integer(obj, &busy_str, app->busy_processes, 2);
+        nxt_conf_set_member_integer(obj, &idle_str, app->idle_processes, 3);
 
         obj = nxt_conf_create_object(mp, 1);
         if (nxt_slow_path(obj == NULL)) {
@@ -83,6 +85,15 @@ nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
 
         nxt_conf_set_member_integer(obj, &active_str, app->active_requests, 0);
     }
+
+    obj = nxt_conf_create_object(mp, 2);
+    if (nxt_slow_path(obj == NULL)) {
+        return NULL;
+    }
+
+    nxt_conf_set_member(status, &procs_str, obj, 2);
+    nxt_conf_set_member_integer(obj, &busy_str, report->busy_processes, 0);
+    nxt_conf_set_member_integer(obj, &idle_str, report->idle_processes, 1);
 
     return status;
 }

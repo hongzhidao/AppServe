@@ -870,6 +870,7 @@ nxt_router_status_handler(nxt_task_t *task, nxt_port_recv_msg_t *msg)
 {
     u_char               *p;
     size_t               alloc;
+    uint32_t             processes, idle;
     nxt_app_t            *app;
     nxt_buf_t            *b;
     nxt_uint_t           type;
@@ -929,10 +930,17 @@ nxt_router_status_handler(nxt_task_t *task, nxt_port_recv_msg_t *msg)
         app_stat->name.length = app->name.length;
         app_stat->name.start = (u_char *) (p - b->mem.pos);
 
+        processes = app->processes;
+        idle = app->idle_processes;
+
         app_stat->active_requests = app->active_requests;
-        app_stat->pending_processes = app->pending_processes;
-        app_stat->processes = app->processes;
-        app_stat->idle_processes = app->idle_processes;
+        app_stat->max_processes = app->max_processes;
+        app_stat->spare_processes = app->spare_processes;
+        app_stat->busy_processes = (processes > idle) ? processes - idle : 0;
+        app_stat->idle_processes = idle;
+
+        report->busy_processes += app_stat->busy_processes;
+        report->idle_processes += app_stat->idle_processes;
 
         report->apps_count++;
         app_stat++;

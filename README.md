@@ -62,9 +62,38 @@ their event loop.
 Query the `/status` API for server and application runtime statistics:
 
 - Total server requests.
-- Running, starting, and idle workers for each application.
+- Busy and idle application workers, per application and in total.
 - Active requests for each application, including requests waiting for a
   worker.
+
+Read `/status/applications/<name>/processes` for an application's worker-pool
+policy and current state:
+
+```json
+{
+  "max": 8,
+  "spare": 2,
+  "busy": 3,
+  "idle": 2
+}
+```
+
+`max` is the configured worker limit, and `spare` is the desired number of
+idle workers. A fixed `processes` count sets both to that count. The actual
+`idle` count can differ from `spare` while workers start, serve requests, or
+await idle-timeout reclamation.
+
+`busy` and `idle` are current worker counts: `busy` is the number of running
+workers that are not idle, including workers serving WebSocket sessions.
+Their sum estimates the running worker count. Worker counts and active requests
+are sampled independently without locking request handling, so they can briefly
+differ while workers start, become idle, or exit. `busy` is clamped to zero if
+the sampled idle count exceeds the sampled running count.
+
+`/status/processes` returns only `busy` and `idle`, summed across the configured
+applications' worker pools shown in the same status response. An application's
+previous configuration, or a deleted application, may still have draining
+workers; those old pools are outside this response.
 
 Richer application-level statistics are a focus of ongoing development,
 supporting performance analysis, troubleshooting, and capacity planning.

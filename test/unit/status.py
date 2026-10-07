@@ -9,6 +9,10 @@ class Status:
         assert Status.control.conf_get('/status') == {
             'requests': {'total': 0},
             'applications': {},
+            'processes': {
+                'busy': 0,
+                'idle': 0,
+            },
         }
 
     def init(status=None):
