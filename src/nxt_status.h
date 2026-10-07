@@ -31,6 +31,7 @@ typedef struct {
     nxt_status_latency_t  latency;
     uint64_t              crash_processes;
     uint32_t              active_requests;
+    uint32_t              queued_requests;
     uint32_t              max_processes;
     uint32_t              spare_processes;
     uint32_t              busy_processes;
@@ -41,6 +42,7 @@ typedef struct {
 typedef struct {
     uint64_t              total_requests;
     uint64_t              active_requests;
+    uint64_t              queued_requests;
     uint64_t              completed_requests;
     uint64_t              failed_requests;
     uint64_t              busy_processes;

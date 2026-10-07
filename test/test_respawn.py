@@ -146,13 +146,13 @@ def test_respawn_application_inflight_failed(skip_alert, unit_pid, worker):
         sock.close()
 
     assert client.conf_get('/status/requests') == {
-        'total': 1, 'active': 0, 'completed': 0, 'failed': 1,
+        'total': 1, 'active': 0, 'queued': 0, 'completed': 0, 'failed': 1,
     }
     assert client.conf_get('/status/applications/' + client.app_name
                            + '/processes/crash') == int(worker)
     assert client.get()['status'] == 200
     assert client.conf_get('/status/requests') == {
-        'total': 2, 'active': 0, 'completed': 1, 'failed': 1,
+        'total': 2, 'active': 0, 'queued': 0, 'completed': 1, 'failed': 1,
     }
 
 

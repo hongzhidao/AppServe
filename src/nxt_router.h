@@ -130,6 +130,7 @@ struct nxt_app_s {
     nxt_status_latency_t      latency;
     uint64_t                  crash_processes;
     uint32_t                  active_requests;
+    uint32_t                  queued_requests;
     uint32_t                  pending_processes;
     uint32_t                  processes;
     uint32_t                  idle_processes;

@@ -118,7 +118,10 @@ def test_asgi_websockets_worker_idle():
                     'idle': idle,
                     'crash': 0,
                 },
-                'requests': {'total': 2, 'active': 0, 'completed': 2, 'failed': 0},
+                'requests': {
+                    'total': 2, 'active': 0, 'queued': 0,
+                    'completed': 2, 'failed': 0,
+                },
                 'responses': {'1xx': 2, '2xx': 0, '3xx': 0, '4xx': 0, '5xx': 0},
             }:
                 return

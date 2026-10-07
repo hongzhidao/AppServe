@@ -573,6 +573,21 @@ nxt_router_app_request_latency(nxt_task_t *task,
 }
 
 
+/* Caller holds app->mutex. */
+nxt_inline nxt_bool_t
+nxt_router_app_request_dequeue(nxt_app_t *app, nxt_http_request_t *r)
+{
+    if (nxt_queue_chk_remove(&r->app_link)) {
+        nxt_assert(app->queued_requests != 0);
+        app->queued_requests--;
+
+        return 1;
+    }
+
+    return 0;
+}
+
+
 nxt_inline void
 nxt_request_rpc_data_unlink(nxt_task_t *task,
     nxt_request_rpc_data_t *req_rpc_data)
@@ -609,16 +624,9 @@ nxt_request_rpc_data_unlink(nxt_task_t *task,
         req_rpc_data->request = NULL;
 
         if (app != NULL) {
-            unlinked = 0;
-
             nxt_thread_mutex_lock(&app->mutex);
 
-            if (r->app_link.next != NULL) {
-                nxt_queue_remove(&r->app_link);
-                r->app_link.next = NULL;
-
-                unlinked = 1;
-            }
+            unlinked = nxt_router_app_request_dequeue(app, r);
 
             nxt_thread_mutex_unlock(&app->mutex);
 
@@ -945,6 +953,7 @@ nxt_router_status_handler(nxt_task_t *task, nxt_port_recv_msg_t *msg)
 
         app_stat->total_requests = app->total_requests;
         app_stat->active_requests = app->active_requests;
+        app_stat->queued_requests = app->queued_requests;
         app_stat->completed_requests = app->completed_requests;
         app_stat->failed_requests = app->failed_requests;
         app_stat->latency = app->latency;
@@ -961,6 +970,7 @@ nxt_router_status_handler(nxt_task_t *task, nxt_port_recv_msg_t *msg)
 
         report->total_requests += app_stat->total_requests;
         report->active_requests += app_stat->active_requests;
+        report->queued_requests += app_stat->queued_requests;
         report->completed_requests += app_stat->completed_requests;
         report->failed_requests += app_stat->failed_requests;
         report->latency.sum += app_stat->latency.sum;
@@ -3659,12 +3669,7 @@ nxt_router_req_headers_ack_handler(nxt_task_t *task,
 
     nxt_thread_mutex_lock(&app->mutex);
 
-    if (r->app_link.next != NULL) {
-        nxt_queue_remove(&r->app_link);
-        r->app_link.next = NULL;
-
-        unlinked = 1;
-    }
+    unlinked = nxt_router_app_request_dequeue(app, r);
 
     app_process = nxt_router_app_process_find(app, msg->port_msg.pid);
     if (nxt_slow_path(app_process == NULL || msg->port_msg.reply_port != 0)) {
@@ -4197,8 +4202,8 @@ nxt_router_app_process_error(nxt_task_t *task, nxt_port_recv_msg_t *msg,
     if (app->processes == 0 && !nxt_queue_is_empty(&app->ack_waiting_req)) {
         link = nxt_queue_first(&app->ack_waiting_req);
 
-        nxt_queue_remove(link);
-        link->next = NULL;
+        r = nxt_container_of(link, nxt_http_request_t, app_link);
+        (void) nxt_router_app_request_dequeue(app, r);
     }
 
     nxt_thread_mutex_unlock(&app->mutex);
@@ -4217,8 +4222,8 @@ nxt_router_app_process_error(nxt_task_t *task, nxt_port_recv_msg_t *msg,
         {
             link = nxt_queue_first(&app->ack_waiting_req);
 
-            nxt_queue_remove(link);
-            link->next = NULL;
+            r = nxt_container_of(link, nxt_http_request_t, app_link);
+            (void) nxt_router_app_request_dequeue(app, r);
         }
 
         nxt_thread_mutex_unlock(&app->mutex);
@@ -4660,6 +4665,8 @@ nxt_router_free_app(nxt_task_t *task, void *obj, void *data)
     nxt_assert(app->prototype == NULL);
     nxt_assert(app->processes == 0);
     nxt_assert(app->active_requests == 0);
+    nxt_assert(app->queued_requests == 0);
+    nxt_assert(nxt_queue_is_empty(&app->ack_waiting_req));
     nxt_assert(nxt_lvlhsh_is_empty(&app->process_hash));
     nxt_assert(app->idle_processes == 0);
     nxt_assert(nxt_queue_is_empty(&app->process_list));
@@ -4725,6 +4732,7 @@ nxt_router_app_port_get(nxt_task_t *task, nxt_app_t *app,
      * if something goes wrong with application processes.
      */
     nxt_queue_insert_tail(&app->ack_waiting_req, &r->app_link);
+    app->queued_requests++;
 
     nxt_thread_mutex_unlock(&app->mutex);
 

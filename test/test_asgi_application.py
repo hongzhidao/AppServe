@@ -446,6 +446,7 @@ def test_asgi_application_worker_idle():
                 'requests': {
                     'total': 4,
                     'active': active,
+                    'queued': 0,
                     'completed': 4 - active,
                     'failed': 0,
                 },
@@ -495,6 +496,7 @@ def test_asgi_application_worker_idle():
         assert client.conf_get('/status/applications/single_thread/requests') == {
             'total': 5,
             'active': 0,
+            'queued': 0,
             'completed': 5,
             'failed': 0,
         }

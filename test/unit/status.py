@@ -7,7 +7,9 @@ class Status:
 
     def _check_zeros():
         assert Status.control.conf_get('/status') == {
-            'requests': {'total': 0, 'active': 0, 'completed': 0, 'failed': 0},
+            'requests': {
+                'total': 0, 'active': 0, 'queued': 0, 'completed': 0, 'failed': 0,
+            },
             'applications': {},
             'processes': {
                 'busy': 0,
