@@ -11,6 +11,7 @@
 #include <nxt_main.h>
 #include <nxt_runtime.h>
 #include <nxt_main_process.h>
+#include <nxt_status.h>
 
 typedef struct nxt_http_request_s  nxt_http_request_t;
 #include <nxt_application.h>
@@ -126,8 +127,7 @@ struct nxt_app_s {
     uint64_t                  completed_requests;
     uint64_t                  failed_requests;
     uint64_t                  responses[5];
-    uint64_t                  latency_sum;
-    uint64_t                  latency_max;
+    nxt_status_latency_t      latency;
     uint32_t                  active_requests;
     uint32_t                  pending_processes;
     uint32_t                  processes;

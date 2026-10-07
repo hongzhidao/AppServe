@@ -18,9 +18,10 @@ def check_latency(status):
     for state in [status, *apps]:
         latency = state['latency']
         count = state['requests']['completed'] + state['requests']['failed']
-        assert list(latency) == ['sum', 'avg', 'max']
+        assert list(latency) == ['sum', 'avg', 'max', 'p95', 'p99']
         assert latency['avg'] == (latency['sum'] // count if count else 0)
         assert all(value >= 0 for value in latency.values())
+        assert latency['p95'] <= latency['p99'] <= latency['max']
     assert status['latency']['sum'] == sum(app['latency']['sum'] for app in apps)
     assert status['latency']['max'] == max(
         (app['latency']['max'] for app in apps), default=0
@@ -256,7 +257,9 @@ def test_status_requests_queued():
         }
         assert app['processes']['busy'] == 0, 'requests queued before worker start'
         assert status['requests'] == app['requests']
-        assert app['latency'] == {'sum': 0, 'avg': 0, 'max': 0}
+        assert app['latency'] == {
+            'sum': 0, 'avg': 0, 'max': 0, 'p95': 0, 'p99': 0,
+        }
 
         for sock in socks:
             assert client._resp_to_dict(client.recvall(sock).decode())['status'] == 200
@@ -271,6 +274,7 @@ def test_status_requests_queued():
     assert latency['avg'] == latency['sum'] // 2
     assert latency['sum'] >= 3000, 'latency includes worker startup and queueing'
     assert latency['max'] >= 1500
+    assert latency['p95'] == latency['p99'] == latency['max']
 
 
 def test_status_requests_outcomes():
@@ -338,6 +342,7 @@ def test_status_requests_timeout():
     latency = client.conf_get('/status/latency')
     assert 800 <= latency['max'] < 2000, 'failed request timed until timeout'
     assert latency['sum'] == latency['avg'] == latency['max']
+    assert latency['p95'] == latency['p99'] == latency['max']
     time.sleep(3)
     assert client.conf_get('/status/requests') == expected, 'late response not counted'
     assert client.conf_get('/status/latency') == latency, 'late response not timed'
@@ -357,7 +362,7 @@ def test_status_requests_cancelled():
             'total': 1, 'active': 1, 'completed': 0, 'failed': 0,
         }
         assert client.conf_get('/status/latency') == {
-            'sum': 0, 'avg': 0, 'max': 0,
+            'sum': 0, 'avg': 0, 'max': 0, 'p95': 0, 'p99': 0,
         }
         assert client.conf_get('/status/responses') == {
             '1xx': 0, '2xx': 1, '3xx': 0, '4xx': 0, '5xx': 0,
@@ -375,6 +380,7 @@ def test_status_requests_cancelled():
     assert requests == expected
     latency = client.conf_get('/status/latency')
     assert latency['sum'] == latency['avg'] == latency['max']
+    assert latency['p95'] == latency['p99'] == latency['max']
     assert client.conf_get('/status/responses') == {
         '1xx': 0, '2xx': 1, '3xx': 0, '4xx': 0, '5xx': 0,
     }
@@ -466,7 +472,7 @@ def test_status_requests_reconfigure():
     assert 'success' in client.conf_delete('applications/orders')
     check_requests({})
     assert client.conf_get('/status/latency') == {
-        'sum': 0, 'avg': 0, 'max': 0,
+        'sum': 0, 'avg': 0, 'max': 0, 'p95': 0, 'p99': 0,
     }
 
 
@@ -482,7 +488,7 @@ def test_status_latency():
         'applications': apps,
     })
     assert client.conf_get('/status/latency') == {
-        'sum': 0, 'avg': 0, 'max': 0,
+        'sum': 0, 'avg': 0, 'max': 0, 'p95': 0, 'p99': 0,
     }
 
     for delay in ('0.1', '0.3'):
@@ -500,8 +506,96 @@ def test_status_latency():
     assert slow['sum'] >= 350
     assert slow['max'] >= 250
     assert fast['max'] >= 40
+    assert slow['p95'] == slow['p99'] == slow['max']
+    assert fast['p95'] == fast['p99'] == fast['max']
+    assert status['latency']['p95'] == status['latency']['p99'] == slow['max']
     assert status['latency']['avg'] == (slow['sum'] + fast['sum']) // 3
     assert client.conf_get('/status/applications/slow/latency') == slow
+
+
+def test_status_latency_percentiles():
+    apps = {name: app_default('single_thread') for name in ('mixed', 'fast')}
+    for app in apps.values():
+        app['processes'] = 1
+    assert 'success' in client.conf({
+        'listeners': {
+            '*:8080': {'pass': 'applications/mixed'},
+            '*:8081': {'pass': 'applications/fast'},
+        },
+        'applications': apps,
+    })
+
+    # Mixed: 94 fast, 4 medium, 2 slow. Fast: 100 fast.
+    for port, delays in (
+        (8080, [0.01] * 94 + [0.1] * 4 + [0.4] * 2),
+        (8081, [0.01] * 100),
+    ):
+        for delay in delays:
+            assert client.get(port=port, headers={
+                'Host': 'localhost', 'X-Delay': str(delay), 'Connection': 'close',
+            })['status'] == 200
+
+    status = client.conf_get('/status')
+    check_latency(status)
+    mixed = status['applications']['mixed']['latency']
+    fast = status['applications']['fast']['latency']
+    assert 80 <= mixed['p95'] < 250
+    assert 350 <= mixed['p99'] < 650
+    assert fast['p95'] < 80 and fast['p99'] < 80
+    assert status['latency']['p95'] < 80, 'global rank uses merged samples'
+    assert 80 <= status['latency']['p99'] < 250
+    assert client.conf_get('/status/applications/mixed/latency/p95') == mixed['p95']
+    assert client.conf_get('/status/latency/p99') == status['latency']['p99']
+
+    assert 'success' in client.conf_get('/control/applications/mixed/restart')
+    assert 'success' in client.conf(
+        {'pass': 'applications/mixed'}, 'listeners/*:8081'
+    )
+    assert client.conf_get('/status/applications/mixed/latency') == mixed
+
+    apps['mixed']['environment'] = {'REVISION': '2'}
+    assert 'success' in client.conf(apps['mixed'], 'applications/mixed')
+    assert client.conf_get('/status/applications/mixed/latency') == {
+        'sum': 0, 'avg': 0, 'max': 0, 'p95': 0, 'p99': 0,
+    }
+    assert client.conf_get('/status/latency') == fast, 'old latency excluded'
+    assert 'success' in client.conf_delete('applications/fast')
+    assert client.conf_get('/status/latency') == {
+        'sum': 0, 'avg': 0, 'max': 0, 'p95': 0, 'p99': 0,
+    }
+
+
+def test_status_latency_many_applications():
+    # Bucket snapshots for eight apps exceed a single port message.
+    apps = {f'app{i}': app_default() for i in range(8)}
+    assert 'success' in client.conf({
+        'listeners': {
+            f'*:{8080 + i}': {'pass': f'applications/app{i}'}
+            for i in range(8)
+        },
+        'applications': apps,
+    })
+
+    for i in range(8):
+        assert client.get(port=8080 + i)['status'] == 200
+
+    status = client.conf_get('/status')
+    check_latency(status)
+    assert set(status['applications']) == set(apps)
+    assert status['requests'] == {
+        'total': 8, 'active': 0, 'completed': 8, 'failed': 0,
+    }
+    latency = status['latency']
+    assert latency['p95'] == latency['p99'] == latency['max']
+
+    for name, app in status['applications'].items():
+        assert app['requests'] == {
+            'total': 1, 'active': 0, 'completed': 1, 'failed': 0,
+        }
+        latency = app['latency']
+        assert latency['sum'] == latency['avg'] == latency['max']
+        assert latency['p95'] == latency['p99'] == latency['max']
+        assert client.conf_get(f'/status/applications/{name}/latency') == latency
 
 
 def test_status_processes_global():

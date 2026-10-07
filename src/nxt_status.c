@@ -1,6 +1,7 @@
 
 /*
  * Copyright (C) NGINX, Inc.
+ * Copyright (C) Zhidao HONG
  */
 
 #include <nxt_main.h>
@@ -12,7 +13,7 @@ nxt_conf_value_t *
 nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
 {
     size_t            i, j;
-    uint64_t          count;
+    uint64_t          count, p95, p99;
     nxt_str_t         name;
     nxt_int_t         ret;
     nxt_status_app_t  *app;
@@ -33,6 +34,8 @@ nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
     static nxt_str_t latency_str = nxt_string("latency");
     static nxt_str_t sum_str = nxt_string("sum");
     static nxt_str_t avg_str = nxt_string("avg");
+    static nxt_str_t p95_str = nxt_string("p95");
+    static nxt_str_t p99_str = nxt_string("p99");
     static nxt_str_t response_classes[] = {
         nxt_string("1xx"),
         nxt_string("2xx"),
@@ -119,17 +122,20 @@ nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
                                         app->responses[j], j);
         }
 
-        obj = nxt_conf_create_object(mp, 3);
+        obj = nxt_conf_create_object(mp, 5);
         if (nxt_slow_path(obj == NULL)) {
             return NULL;
         }
 
         count = app->completed_requests + app->failed_requests;
+        nxt_status_latency_percentiles(&app->latency, &p95, &p99);
         nxt_conf_set_member(app_obj, &latency_str, obj, 3);
-        nxt_conf_set_member_integer(obj, &sum_str, app->latency_sum, 0);
+        nxt_conf_set_member_integer(obj, &sum_str, app->latency.sum, 0);
         nxt_conf_set_member_integer(obj, &avg_str,
-                                    count != 0 ? app->latency_sum / count : 0, 1);
-        nxt_conf_set_member_integer(obj, &max_str, app->latency_max, 2);
+                                    count != 0 ? app->latency.sum / count : 0, 1);
+        nxt_conf_set_member_integer(obj, &max_str, app->latency.max, 2);
+        nxt_conf_set_member_integer(obj, &p95_str, p95, 3);
+        nxt_conf_set_member_integer(obj, &p99_str, p99, 4);
     }
 
     obj = nxt_conf_create_object(mp, 2);
@@ -153,17 +159,74 @@ nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
                                     report->responses[j], j);
     }
 
-    obj = nxt_conf_create_object(mp, 3);
+    obj = nxt_conf_create_object(mp, 5);
     if (nxt_slow_path(obj == NULL)) {
         return NULL;
     }
 
     count = report->completed_requests + report->failed_requests;
+    nxt_status_latency_percentiles(&report->latency, &p95, &p99);
     nxt_conf_set_member(status, &latency_str, obj, 4);
-    nxt_conf_set_member_integer(obj, &sum_str, report->latency_sum, 0);
+    nxt_conf_set_member_integer(obj, &sum_str, report->latency.sum, 0);
     nxt_conf_set_member_integer(obj, &avg_str,
-                                count != 0 ? report->latency_sum / count : 0, 1);
-    nxt_conf_set_member_integer(obj, &max_str, report->latency_max, 2);
+                                count != 0 ? report->latency.sum / count : 0, 1);
+    nxt_conf_set_member_integer(obj, &max_str, report->latency.max, 2);
+    nxt_conf_set_member_integer(obj, &p95_str, p95, 3);
+    nxt_conf_set_member_integer(obj, &p99_str, p99, 4);
 
     return status;
+}
+
+
+void
+nxt_status_latency_percentiles(const nxt_status_latency_t *latency,
+    uint64_t *p95, uint64_t *p99)
+{
+    uint64_t    count, rank95, rank99, cumulative, upper;
+    nxt_uint_t  i, shift;
+
+    count = 0;
+
+    for (i = 0; i < NXT_STATUS_LATENCY_BUCKETS; i++) {
+        count += latency->buckets[i];
+    }
+
+    *p95 = 0;
+    *p99 = 0;
+
+    if (count == 0) {
+        return;
+    }
+
+    /* Nearest ranks, without overflowing count * percentile. */
+    rank95 = count - count / 20;
+    rank99 = count - count / 100;
+    cumulative = 0;
+
+    for (i = 0; i < NXT_STATUS_LATENCY_BUCKETS; i++) {
+        cumulative += latency->buckets[i];
+
+        if (cumulative < rank95) {
+            continue;
+        }
+
+        if (i < 16) {
+            upper = i;
+
+        } else {
+            shift = i / 8 - 1;
+            upper = ((uint64_t) (8 + i % 8) << shift)
+                    | (((uint64_t) 1 << shift) - 1);
+        }
+
+        if (rank95 != 0) {
+            *p95 = nxt_min(upper, latency->max);
+            rank95 = 0;
+        }
+
+        if (cumulative >= rank99) {
+            *p99 = nxt_min(upper, latency->max);
+            return;
+        }
+    }
 }

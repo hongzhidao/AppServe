@@ -132,10 +132,20 @@ responses. These counters describe response headers, not completed delivery.
 Response counters follow the same configuration lifetime as request counters.
 Response counts are approximate under concurrent updates.
 
-`/status/applications/<name>/latency` returns `sum`, `avg`, and `max`, all in
-integer milliseconds. `sum` is the cumulative duration of completed and failed
-requests, `avg` is `sum / (requests.completed + requests.failed)` rounded down,
-and `max` is the longest duration. All fields are zero before any request ends.
+`/status/applications/<name>/latency` returns `sum`, `avg`, `max`, `p95`, and
+`p99`, all in integer milliseconds. `sum` is the cumulative duration of completed
+and failed requests, `avg` is `sum / (requests.completed + requests.failed)`
+rounded down, and `max` is the longest duration. All fields are zero before any
+request ends.
+
+`p95` and `p99` estimate the 95th and 99th percentiles of completed and failed
+request durations using fixed-size latency buckets (about 4 KiB per application).
+Buckets record each millisecond below 16 ms and divide each larger power-of-two
+range into eight equal-width buckets. Percentiles use the bucket containing
+the nearest rank, rounded up, and report its upper bound, capped at `max`.
+For example, a 203 ms sample falls in the 192–207 ms bucket. Bucket rounding
+can overestimate a percentile by up to about 12.5% before the cap at `max`.
+These are cumulative percentiles, not a recent-time window.
 
 Latency starts when a request enters the application queue and ends when its
 response completes or its failure is detected. It includes queueing, worker
@@ -145,8 +155,13 @@ until the upgrade completes; frames and session closure add no samples.
 
 `/status/latency` sums application durations, computes the weighted average using
 the global completed and failed request counts, and takes the largest application
-maximum. Latency statistics are approximate and follow the request counters'
-configuration lifetime.
+maximum. Global `p95` and `p99` are calculated from the merged application
+latency buckets, rather than averaging application percentiles. Percentile ranks
+use the sample count in the bucket snapshot, which can differ from independently
+sampled request counters. Latency recording and sampling add no locks or atomic
+operations; concurrent updates can be lost and snapshots can briefly differ.
+Latency statistics are approximate and follow the request counters' configuration
+lifetime.
 
 Richer application-level statistics are a focus of ongoing development,
 supporting performance analysis, troubleshooting, and capacity planning.

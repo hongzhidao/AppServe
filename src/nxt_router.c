@@ -569,8 +569,7 @@ nxt_router_app_request_latency(nxt_task_t *task,
                - req_rpc_data->start_time) / 1000000;
 
     app = req_rpc_data->app;
-    app->latency_sum += elapsed;
-    app->latency_max = nxt_max(app->latency_max, elapsed);
+    nxt_status_latency_record(&app->latency, elapsed);
 }
 
 
@@ -948,19 +947,23 @@ nxt_router_status_handler(nxt_task_t *task, nxt_port_recv_msg_t *msg)
         app_stat->active_requests = app->active_requests;
         app_stat->completed_requests = app->completed_requests;
         app_stat->failed_requests = app->failed_requests;
-        app_stat->latency_sum = app->latency_sum;
-        app_stat->latency_max = app->latency_max;
+        app_stat->latency = app->latency;
         app_stat->max_processes = app->max_processes;
         app_stat->spare_processes = app->spare_processes;
         app_stat->busy_processes = (processes > idle) ? processes - idle : 0;
         app_stat->idle_processes = idle;
 
+        /* Merge the same approximate latency snapshot used for the app. */
+        for (i = 0; i < NXT_STATUS_LATENCY_BUCKETS; i++) {
+            report->latency.buckets[i] += app_stat->latency.buckets[i];
+        }
+
         report->total_requests += app_stat->total_requests;
         report->active_requests += app_stat->active_requests;
         report->completed_requests += app_stat->completed_requests;
         report->failed_requests += app_stat->failed_requests;
-        report->latency_sum += app_stat->latency_sum;
-        report->latency_max = nxt_max(report->latency_max, app_stat->latency_max);
+        report->latency.sum += app_stat->latency.sum;
+        report->latency.max = nxt_max(report->latency.max, app_stat->latency.max);
         report->busy_processes += app_stat->busy_processes;
         report->idle_processes += app_stat->idle_processes;
 

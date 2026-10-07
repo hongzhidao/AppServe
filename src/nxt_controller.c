@@ -1465,6 +1465,7 @@ static void
 nxt_controller_status_handler(nxt_task_t *task, nxt_port_recv_msg_t *msg,
     void *data)
 {
+    nxt_buf_t                  *b;
     nxt_conf_value_t           *status;
     nxt_controller_request_t   *req;
     nxt_controller_response_t  resp;
@@ -1473,11 +1474,14 @@ nxt_controller_status_handler(nxt_task_t *task, nxt_port_recv_msg_t *msg,
 
     req = data;
 
+    status = NULL;
+
     if (msg->port_msg.type == NXT_PORT_MSG_RPC_READY) {
-        status = nxt_status_get((nxt_status_report_t *) msg->buf->mem.pos,
-                                req->conn->mem_pool);
-    } else {
-        status = NULL;
+        b = nxt_buf_chk_make_plain(req->conn->mem_pool, msg->buf, msg->size);
+        if (b != NULL) {
+            status = nxt_status_get((nxt_status_report_t *) b->mem.pos,
+                                    req->conn->mem_pool);
+        }
     }
 
     if (status == NULL) {

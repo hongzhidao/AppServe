@@ -138,6 +138,7 @@ def test_asgi_websockets_worker_idle():
         }
         latency = client.conf_get('/status/latency')
         assert latency['avg'] == latency['sum'] // 2
+        assert latency['p95'] == latency['p99'] == latency['max']
         socks[0].close()
         time.sleep(1.2)
         wait_for_state(0)
