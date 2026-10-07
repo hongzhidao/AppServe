@@ -441,6 +441,7 @@ def test_asgi_application_worker_idle():
                     'spare': 0,
                     'busy': running - idle,
                     'idle': idle,
+                    'crash': 0,
                 },
                 'requests': {
                     'total': 4,

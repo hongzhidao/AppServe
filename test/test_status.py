@@ -1,3 +1,5 @@
+import os
+import signal
 import socket
 import struct
 import time
@@ -144,6 +146,7 @@ def test_status_applications():
                 'spare': spare,
                 'busy': busy,
                 'idle': idle,
+                'crash': 0,
             },
             'requests': {
                 'total': total,
@@ -600,6 +603,9 @@ def test_status_latency_many_applications():
 
 def test_status_processes_global():
     def wait_processes(expected):
+        expected = {
+            name: {**state, 'crash': 0} for name, state in expected.items()
+        }
         for _ in range(200):
             status = client.conf_get('/status')
             processes = {
@@ -607,12 +613,12 @@ def test_status_processes_global():
                 for name, app in status['applications'].items()
             }
             for state in processes.values():
-                assert list(state) == ['max', 'spare', 'busy', 'idle']
+                assert list(state) == ['max', 'spare', 'busy', 'idle', 'crash']
                 assert all(count >= 0 for count in state.values())
                 assert state['spare'] <= state['max']
             assert status['processes'] == {
                 field: sum(state[field] for state in processes.values())
-                for field in ('busy', 'idle')
+                for field in ('busy', 'idle', 'crash')
             }, 'global is the app snapshot sum'
             if processes == expected:
                 return status
@@ -633,7 +639,7 @@ def test_status_processes_global():
         'orders': {'max': 2, 'spare': 2, 'busy': 0, 'idle': 2},
         'users': {'max': 1, 'spare': 1, 'busy': 0, 'idle': 1},
     })
-    assert client.conf_get('/status/processes') == {'busy': 0, 'idle': 3}
+    assert client.conf_get('/status/processes') == {'busy': 0, 'idle': 3, 'crash': 0}
 
     sock = client.get(headers={
         'Host': 'localhost', 'X-Delay': '1', 'Connection': 'close',
@@ -674,6 +680,95 @@ def test_status_processes_global():
     wait_processes({})
 
 
+def test_status_processes_crash(skip_alert):
+    apps = {name: app_default('exit_code') for name in ('orders', 'users')}
+    for app in apps.values():
+        app['processes'] = 1
+    assert 'success' in client.conf({
+        'listeners': {
+            '*:8080': {'pass': 'applications/orders'},
+            '*:8081': {'pass': 'applications/users'},
+        },
+        'applications': apps,
+    })
+
+    def wait_crashes(expected):
+        for _ in range(200):
+            status = client.conf_get('/status')
+            counts = {
+                name: app['processes']['crash']
+                for name, app in status['applications'].items()
+            }
+            assert status['processes']['crash'] == sum(counts.values())
+            if counts == expected:
+                return
+            time.sleep(0.01)
+        assert counts == expected
+
+    wait_crashes({'orders': 0, 'users': 0})
+
+    response = client.get()
+    assert response['status'] == 200
+    pid = int(response['headers']['X-Pid'])
+    skip_alert(r'(?:app )?process %s exited on signal 9' % pid)
+    os.kill(pid, signal.SIGKILL)
+    wait_crashes({'orders': 1, 'users': 0})
+    assert client.get()['status'] == 200, 'worker respawned'
+
+    assert client.get(headers={
+        'Host': 'localhost', 'X-Exit-Code': '7', 'Connection': 'close',
+    })['status'] == 503
+    wait_crashes({'orders': 2, 'users': 0})
+    assert client.get(port=8081, headers={
+        'Host': 'localhost', 'X-Exit-Code': '3', 'Connection': 'close',
+    })['status'] == 503
+    wait_crashes({'orders': 2, 'users': 1})
+    assert client.conf_get('/status/applications/orders/processes/crash') == 2
+    assert client.conf_get('/status/processes/crash') == 3
+
+    # A zero exit is not a crash, even if it interrupts a request.
+    assert client.get(headers={
+        'Host': 'localhost', 'X-Exit-Code': '0', 'Connection': 'close',
+    })['status'] == 503
+    assert client.get()['status'] == 200
+    wait_crashes({'orders': 2, 'users': 1})
+
+    assert 'success' in client.conf_get('/control/applications/orders/restart')
+    assert 'success' in client.conf(
+        {'pass': 'applications/orders'}, 'listeners/*:8081'
+    )
+    assert client.get()['status'] == 200
+    wait_crashes({'orders': 2, 'users': 1})
+
+    apps['orders']['environment'] = {'REVISION': '2'}
+    assert 'success' in client.conf(apps['orders'], 'applications/orders')
+    wait_crashes({'orders': 0, 'users': 1})
+    assert 'success' in client.conf_delete('applications/users')
+    wait_crashes({'orders': 0})
+
+
+def test_status_processes_crash_normal_recycling():
+    client.load('exit_code', processes=1, limits={'requests': 1})
+    pids = set()
+    for _ in range(3):
+        response = client.get()
+        assert response['status'] == 200
+        pids.add(response['headers']['X-Pid'])
+    assert len(pids) == 3, 'request limit recycled workers'
+    assert client.conf_get('/status/applications/exit_code/processes/crash') == 0
+    assert client.conf_get('/status/processes/crash') == 0
+
+    client.load('exit_code', processes={'max': 1, 'spare': 0, 'idle_timeout': 1})
+    assert client.get()['status'] == 200
+    for _ in range(300):
+        processes = client.conf_get('/status/applications/exit_code/processes')
+        if processes['busy'] == processes['idle'] == 0:
+            break
+        time.sleep(0.01)
+    assert processes == {'max': 1, 'spare': 0, 'busy': 0, 'idle': 0, 'crash': 0}
+    assert client.conf_get('/status/processes/crash') == 0
+
+
 def test_status_processes_sampling():
     client.load('empty', processes={'max': 4, 'spare': 0, 'idle_timeout': 1})
 
@@ -690,6 +785,7 @@ def test_status_processes_sampling():
         assert processes['spare'] == 0
         assert 0 <= processes['busy'] <= 4
         assert 0 <= processes['idle'] <= 4
+        assert processes['crash'] == 0
         assert 0 <= app['requests']['active'] <= 4
         assert status['requests'] == app['requests']
         assert status['responses'] == app['responses']
@@ -699,6 +795,7 @@ def test_status_processes_sampling():
         assert status['processes'] == {
             'busy': processes['busy'],
             'idle': processes['idle'],
+            'crash': 0,
         }
         return app
 
@@ -713,7 +810,7 @@ def test_status_processes_sampling():
             request.result()
 
     expected = {
-        'processes': {'max': 4, 'spare': 0, 'busy': 0, 'idle': 0},
+        'processes': {'max': 4, 'spare': 0, 'busy': 0, 'idle': 0, 'crash': 0},
         'requests': {'total': 400, 'active': 0, 'completed': 400, 'failed': 0},
     }
     for _ in range(300):

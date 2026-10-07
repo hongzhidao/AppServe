@@ -844,7 +844,9 @@ nxt_proto_sigchld_handler(nxt_task_t *task, void *obj, void *data)
         }
 
         if (process->state != NXT_PROCESS_STATE_CREATING) {
-            nxt_port_remove_notify_others(task, process);
+            nxt_port_remove_notify_others(task, process,
+                WIFSIGNALED(status)
+                || (WIFEXITED(status) && WEXITSTATUS(status) != 0));
         }
 
         nxt_process_close_ports(task, process);

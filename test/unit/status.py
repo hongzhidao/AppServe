@@ -12,6 +12,7 @@ class Status:
             'processes': {
                 'busy': 0,
                 'idle': 0,
+                'crash': 0,
             },
             'responses': {'1xx': 0, '2xx': 0, '3xx': 0, '4xx': 0, '5xx': 0},
             'latency': {'sum': 0, 'avg': 0, 'max': 0, 'p95': 0, 'p99': 0},

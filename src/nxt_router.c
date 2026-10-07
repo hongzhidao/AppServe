@@ -952,6 +952,7 @@ nxt_router_status_handler(nxt_task_t *task, nxt_port_recv_msg_t *msg)
         app_stat->spare_processes = app->spare_processes;
         app_stat->busy_processes = (processes > idle) ? processes - idle : 0;
         app_stat->idle_processes = idle;
+        app_stat->crash_processes = app->crash_processes;
 
         /* Merge the same approximate latency snapshot used for the app. */
         for (i = 0; i < NXT_STATUS_LATENCY_BUCKETS; i++) {
@@ -966,6 +967,7 @@ nxt_router_status_handler(nxt_task_t *task, nxt_port_recv_msg_t *msg)
         report->latency.max = nxt_max(report->latency.max, app_stat->latency.max);
         report->busy_processes += app_stat->busy_processes;
         report->idle_processes += app_stat->idle_processes;
+        report->crash_processes += app_stat->crash_processes;
 
         for (i = 0; i < nxt_nitems(app_stat->responses); i++) {
             app_stat->responses[i] = app->responses[i];
@@ -1002,8 +1004,24 @@ nxt_router_app_process_remove_pid(nxt_task_t *task, nxt_port_t *port,
 static void
 nxt_router_remove_pid_handler(nxt_task_t *task, nxt_port_recv_msg_t *msg)
 {
-    nxt_router_t         *router;
-    nxt_router_thread_t  *rt_thread;
+    nxt_pid_t                 pid;
+    nxt_process_t             *process;
+    nxt_router_t              *router;
+    nxt_router_thread_t       *rt_thread;
+    nxt_router_app_process_t  *app_process;
+
+    if (msg->size == sizeof(pid) + 1 && msg->buf->mem.pos[sizeof(pid)] != 0) {
+        nxt_memcpy(&pid, msg->buf->mem.pos, sizeof(pid));
+        process = nxt_runtime_process_find(task->thread->runtime, pid);
+
+        if (process != NULL && nxt_process_type(process) == NXT_PROCESS_APP) {
+            app_process = process->data;
+
+            if (app_process != NULL && app_process->app != NULL) {
+                app_process->app->crash_processes++;
+            }
+        }
+    }
 
     nxt_port_remove_pid_handler(task, msg);
 

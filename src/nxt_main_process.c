@@ -864,10 +864,12 @@ nxt_main_process_sigchld_handler(nxt_task_t *task, void *obj, void *data)
                 continue;
             }
 
-            nxt_port_remove_notify_others(task, process);
+            nxt_port_remove_notify_others(task, process,
+                WIFSIGNALED(status)
+                || (WIFEXITED(status) && WEXITSTATUS(status) != 0));
 
             nxt_queue_each(child, &children, nxt_process_t, link) {
-                nxt_port_remove_notify_others(task, child);
+                nxt_port_remove_notify_others(task, child, 0);
 
                 nxt_queue_remove(&child->link);
                 child->link.next = NULL;

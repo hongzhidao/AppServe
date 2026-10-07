@@ -446,8 +446,10 @@ nxt_port_data_handler(nxt_task_t *task, nxt_port_recv_msg_t *msg)
 
 
 void
-nxt_port_remove_notify_others(nxt_task_t *task, nxt_process_t *process)
+nxt_port_remove_notify_others(nxt_task_t *task, nxt_process_t *process,
+    nxt_bool_t crashed)
 {
+    size_t              size;
     nxt_pid_t           pid;
     nxt_buf_t           *buf;
     nxt_port_t          *port;
@@ -476,14 +478,19 @@ nxt_port_remove_notify_others(nxt_task_t *task, nxt_process_t *process)
             continue;
         }
 
-        buf = nxt_buf_mem_ts_alloc(task, task->thread->engine->mem_pool,
-                                   sizeof(pid));
+        size = sizeof(pid) + (port->type == NXT_PROCESS_ROUTER);
+        buf = nxt_buf_mem_ts_alloc(task, task->thread->engine->mem_pool, size);
 
         if (nxt_slow_path(buf == NULL)) {
             continue;
         }
 
         buf->mem.free = nxt_cpymem(buf->mem.free, &pid, sizeof(pid));
+
+        /* Only the router needs the worker exit outcome. */
+        if (port->type == NXT_PROCESS_ROUTER) {
+            *buf->mem.free++ = (ptype == NXT_PROCESS_APP && crashed);
+        }
 
         nxt_port_socket_write(task, port, NXT_PORT_MSG_REMOVE_PID, -1,
                               process->stream, 0, buf);
@@ -500,7 +507,8 @@ nxt_port_remove_pid_handler(nxt_task_t *task, nxt_port_recv_msg_t *msg)
 
     buf = msg->buf;
 
-    nxt_assert(nxt_buf_used_size(buf) == sizeof(pid));
+    nxt_assert(nxt_buf_used_size(buf) == sizeof(pid)
+               || nxt_buf_used_size(buf) == sizeof(pid) + 1);
 
     nxt_memcpy(&pid, buf->mem.pos, sizeof(nxt_pid_t));
 

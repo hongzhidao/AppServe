@@ -30,6 +30,7 @@ nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
     static nxt_str_t spare_str = nxt_string("spare");
     static nxt_str_t busy_str = nxt_string("busy");
     static nxt_str_t idle_str = nxt_string("idle");
+    static nxt_str_t crash_str = nxt_string("crash");
     static nxt_str_t responses_str = nxt_string("responses");
     static nxt_str_t latency_str = nxt_string("latency");
     static nxt_str_t sum_str = nxt_string("sum");
@@ -85,7 +86,7 @@ nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
             return NULL;
         }
 
-        obj = nxt_conf_create_object(mp, 4);
+        obj = nxt_conf_create_object(mp, 5);
         if (nxt_slow_path(obj == NULL)) {
             return NULL;
         }
@@ -96,6 +97,7 @@ nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
         nxt_conf_set_member_integer(obj, &spare_str, app->spare_processes, 1);
         nxt_conf_set_member_integer(obj, &busy_str, app->busy_processes, 2);
         nxt_conf_set_member_integer(obj, &idle_str, app->idle_processes, 3);
+        nxt_conf_set_member_integer(obj, &crash_str, app->crash_processes, 4);
 
         obj = nxt_conf_create_object(mp, 4);
         if (nxt_slow_path(obj == NULL)) {
@@ -138,7 +140,7 @@ nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
         nxt_conf_set_member_integer(obj, &p99_str, p99, 4);
     }
 
-    obj = nxt_conf_create_object(mp, 2);
+    obj = nxt_conf_create_object(mp, 3);
     if (nxt_slow_path(obj == NULL)) {
         return NULL;
     }
@@ -146,6 +148,7 @@ nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
     nxt_conf_set_member(status, &procs_str, obj, 2);
     nxt_conf_set_member_integer(obj, &busy_str, report->busy_processes, 0);
     nxt_conf_set_member_integer(obj, &idle_str, report->idle_processes, 1);
+    nxt_conf_set_member_integer(obj, &crash_str, report->crash_processes, 2);
 
     obj = nxt_conf_create_object(mp, nxt_nitems(response_classes));
     if (nxt_slow_path(obj == NULL)) {

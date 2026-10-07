@@ -75,7 +75,8 @@ policy and current state:
   "max": 8,
   "spare": 2,
   "busy": 3,
-  "idle": 2
+  "idle": 2,
+  "crash": 27
 }
 ```
 
@@ -91,7 +92,15 @@ are sampled independently without locking request handling, so they can briefly
 differ while workers start, become idle, or exit. `busy` is clamped to zero if
 the sampled idle count exceeds the sampled running count.
 
-`/status/processes` returns only `busy` and `idle`, summed across the configured
+`crash` is the cumulative number of worker processes in the application's pool
+that exited on a signal or with a nonzero exit code. Each worker exit counts
+once, regardless of how many requests it interrupted. Normal exits, idle-timeout
+reclamation, request-limit recycling, and application restarts do not add to it.
+Prototype and server management processes are excluded. Replacing the application's
+configuration resets the counter; listener-only changes and worker restarts
+preserve it.
+
+`/status/processes` returns `busy`, `idle`, and `crash`, summed across the configured
 applications' worker pools shown in the same status response. An application's
 previous configuration, or a deleted application, may still have draining
 workers; those old pools are outside this response.
