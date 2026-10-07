@@ -1561,13 +1561,8 @@ def test_asgi_websockets_worker_exit_removed(skip_alert, unit_pid):
         skip_alert(r'app process %s exited on signal 9' % pid)
         subprocess.check_call(['kill', '-9', pid])
 
-        for _ in range(100):
-            status = client.conf_get('/status/connections')
-            if status['active'] == 0:
-                break
-            time.sleep(0.01)
-
-        assert status['active'] == 0, 'WebSocket released after worker exit'
+        sock.settimeout(5)
+        assert sock.recv(1) == b'', 'WebSocket connection closed after worker exit'
     finally:
         sock.close()
 

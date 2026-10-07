@@ -913,9 +913,6 @@ nxt_router_status_handler(nxt_task_t *task, nxt_port_recv_msg_t *msg)
 
         engine = rt_thread->engine;
 
-        report->accepted_conns += engine->accepted_conns_cnt;
-        report->idle_conns += engine->idle_conns_cnt;
-        report->closed_conns += engine->closed_conns_cnt;
         report->requests += engine->requests_cnt;
 
     } nxt_queue_loop;

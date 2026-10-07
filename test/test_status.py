@@ -10,14 +10,6 @@ prerequisites = {'modules': {'python': 'any'}}
 client = ApplicationPython()
 
 
-def check_connections(accepted, active, idle, closed):
-    assert Status.get('/connections') == {
-        'accepted': accepted,
-        'active': active,
-        'idle': idle,
-        'closed': closed,
-    }
-
 def app_default(name="empty", module="wsgi"):
     return {
         "type": client.get_application_type(),
@@ -29,6 +21,8 @@ def app_default(name="empty", module="wsgi"):
 
 def test_status():
     assert 'error' in client.conf_delete('/status'), 'DELETE method'
+    assert 'connections' not in client.conf_get('/status')
+    assert client.get(**client._get_args('/status/connections'))['status'] == 404
 
 def test_status_requests(skip_alert):
     skip_alert(r'Python failed to import module "blah"')
@@ -88,57 +82,6 @@ Connection: close
     assert Status.get('/requests/total') == 7, 'no receive'
 
     sock.close()
-
-def test_status_connections():
-    assert 'success' in client.conf(
-        {
-            "listeners": {
-                "*:8080": {"pass": "applications/empty"},
-                "*:8081": {"pass": "applications/delayed"},
-            },
-            "applications": {
-                "empty": app_default(),
-                "delayed": app_default("delayed"),
-            },
-        },
-    )
-
-    Status.init()
-
-    # accepted, closed
-
-    assert client.get()['status'] == 200
-    check_connections(1, 0, 0, 1)
-
-    # idle
-
-    (_, sock) = client.get(
-        headers={'Host': 'localhost', 'Connection': 'keep-alive'},
-        start=True,
-        read_timeout=1,
-    )
-
-    check_connections(2, 0, 1, 1)
-
-    client.get(sock=sock)
-    check_connections(2, 0, 0, 2)
-
-    # active
-
-    (_, sock) = client.get(
-        headers={
-            'Host': 'localhost',
-            'X-Delay': '2',
-            'Connection': 'close',
-        },
-        port=8081,
-        start=True,
-        read_timeout=1,
-    )
-    check_connections(3, 1, 0, 2)
-
-    client.get(sock=sock)
-    check_connections(3, 0, 0, 3)
 
 def test_status_applications():
     def check_applications(expert):
@@ -224,8 +167,6 @@ def test_status_fixed_application():
     Status.init()
 
     assert client.get()['status'] == 200
-    check_connections(1, 0, 0, 1)
     assert Status.get('/requests/total') == 1, 'fixed application'
     assert client.get(url='/different')['status'] == 200
-    check_connections(2, 0, 0, 2)
     assert Status.get('/requests/total') == 2, 'fixed application different URI'

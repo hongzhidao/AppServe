@@ -61,7 +61,6 @@ their event loop.
 
 Query the `/status` API for server and application runtime statistics:
 
-- Accepted, active, idle, and closed connections.
 - Total server requests.
 - Running, starting, and idle workers for each application.
 - Active requests for each application, including requests waiting for a
