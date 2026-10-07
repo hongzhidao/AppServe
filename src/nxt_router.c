@@ -877,9 +877,7 @@ nxt_router_status_handler(nxt_task_t *task, nxt_port_recv_msg_t *msg)
     nxt_port_t           *port;
     nxt_router_t         *router;
     nxt_status_app_t     *app_stat;
-    nxt_event_engine_t   *engine;
     nxt_status_report_t  *report;
-    nxt_router_thread_t  *rt_thread;
 
     router = nxt_router_thread(task)->router;
 
@@ -910,14 +908,6 @@ nxt_router_status_handler(nxt_task_t *task, nxt_port_recv_msg_t *msg)
 
     nxt_memzero(report, sizeof(nxt_status_report_t));
 
-    nxt_queue_each(rt_thread, &router->threads, nxt_router_thread_t, link) {
-
-        engine = rt_thread->engine;
-
-        report->requests += engine->requests_cnt;
-
-    } nxt_queue_loop;
-
     report->apps_count = 0;
     app_stat = report->apps;
     p = b->mem.end;
@@ -933,12 +923,15 @@ nxt_router_status_handler(nxt_task_t *task, nxt_port_recv_msg_t *msg)
         processes = app->processes;
         idle = app->idle_processes;
 
+        app_stat->total_requests = app->total_requests;
         app_stat->active_requests = app->active_requests;
         app_stat->max_processes = app->max_processes;
         app_stat->spare_processes = app->spare_processes;
         app_stat->busy_processes = (processes > idle) ? processes - idle : 0;
         app_stat->idle_processes = idle;
 
+        report->total_requests += app_stat->total_requests;
+        report->active_requests += app_stat->active_requests;
         report->busy_processes += app_stat->busy_processes;
         report->idle_processes += app_stat->idle_processes;
 
@@ -4634,6 +4627,7 @@ nxt_router_app_port_get(nxt_task_t *task, nxt_app_t *app,
     port = app->shared_port;
     nxt_port_inc_use(port);
 
+    app->total_requests++;
     app->active_requests++;
 
     if (nxt_router_app_can_start(app) && nxt_router_app_need_start(app)) {

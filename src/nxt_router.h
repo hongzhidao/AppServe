@@ -122,6 +122,7 @@ struct nxt_app_s {
 
     nxt_str_t                 name;
 
+    uint64_t                  total_requests;
     uint32_t                  active_requests;
     uint32_t                  pending_processes;
     uint32_t                  processes;

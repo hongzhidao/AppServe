@@ -61,10 +61,8 @@ their event loop.
 
 Query the `/status` API for server and application runtime statistics:
 
-- Total server requests.
+- Total and active application requests, per application and in total.
 - Busy and idle application workers, per application and in total.
-- Active requests for each application, including requests waiting for a
-  worker.
 
 Read `/status/applications/<name>/processes` for an application's worker-pool
 policy and current state:
@@ -94,6 +92,19 @@ the sampled idle count exceeds the sampled running count.
 applications' worker pools shown in the same status response. An application's
 previous configuration, or a deleted application, may still have draining
 workers; those old pools are outside this response.
+
+`/status/applications/<name>/requests` returns `total` and `active`. A request
+counts toward `total` when it enters the application's request queue, including
+requests that later fail. `active` includes queued requests and requests awaiting
+an application response. A WebSocket upgrade counts once; subsequent frames
+do not count as requests, and an upgraded session is no longer an active request.
+Requests rejected before entering an application are not counted.
+
+`/status/requests` sums `total` and `active` from the applications in the same
+status response. Counters belong to each application configuration instance:
+replacing an application's configuration resets its counters, and deleting it
+removes its counters from the totals. Listener-only changes and worker restarts
+preserve them. Draining requests from old application configurations are excluded.
 
 Richer application-level statistics are a focus of ongoing development,
 supporting performance analysis, troubleshooting, and capacity planning.

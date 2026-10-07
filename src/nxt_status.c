@@ -32,14 +32,15 @@ nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
         return NULL;
     }
 
-    obj = nxt_conf_create_object(mp, 1);
+    obj = nxt_conf_create_object(mp, 2);
     if (nxt_slow_path(obj == NULL)) {
         return NULL;
     }
 
     nxt_conf_set_member(status, &reqs_str, obj, 0);
 
-    nxt_conf_set_member_integer(obj, &total_str, report->requests, 0);
+    nxt_conf_set_member_integer(obj, &total_str, report->total_requests, 0);
+    nxt_conf_set_member_integer(obj, &active_str, report->active_requests, 1);
 
     apps = nxt_conf_create_object(mp, report->apps_count);
     if (nxt_slow_path(apps == NULL)) {
@@ -76,14 +77,15 @@ nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
         nxt_conf_set_member_integer(obj, &busy_str, app->busy_processes, 2);
         nxt_conf_set_member_integer(obj, &idle_str, app->idle_processes, 3);
 
-        obj = nxt_conf_create_object(mp, 1);
+        obj = nxt_conf_create_object(mp, 2);
         if (nxt_slow_path(obj == NULL)) {
             return NULL;
         }
 
         nxt_conf_set_member(app_obj, &reqs_str, obj, 1);
 
-        nxt_conf_set_member_integer(obj, &active_str, app->active_requests, 0);
+        nxt_conf_set_member_integer(obj, &total_str, app->total_requests, 0);
+        nxt_conf_set_member_integer(obj, &active_str, app->active_requests, 1);
     }
 
     obj = nxt_conf_create_object(mp, 2);
