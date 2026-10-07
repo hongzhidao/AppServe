@@ -13,6 +13,20 @@ prerequisites = {'modules': {'python': 'any'}}
 client = ApplicationPython()
 
 
+def check_latency(status):
+    apps = status['applications'].values()
+    for state in [status, *apps]:
+        latency = state['latency']
+        count = state['requests']['completed'] + state['requests']['failed']
+        assert list(latency) == ['sum', 'avg', 'max']
+        assert latency['avg'] == (latency['sum'] // count if count else 0)
+        assert all(value >= 0 for value in latency.values())
+    assert status['latency']['sum'] == sum(app['latency']['sum'] for app in apps)
+    assert status['latency']['max'] == max(
+        (app['latency']['max'] for app in apps), default=0
+    )
+
+
 def app_default(name="empty", module="wsgi"):
     return {
         "type": client.get_application_type(),
@@ -37,6 +51,7 @@ def test_status_requests(skip_alert):
         }
         for _ in range(200):
             status = client.conf_get('/status')
+            check_latency(status)
             requests = {
                 name: app['requests']
                 for name, app in status['applications'].items()
@@ -141,6 +156,7 @@ def test_status_applications():
         }
         for _ in range(200):
             status = client.conf_get(f'/status/applications/{name}')
+            status.pop('latency')
             if status == expected:
                 return
             time.sleep(0.01)
@@ -240,6 +256,7 @@ def test_status_requests_queued():
         }
         assert app['processes']['busy'] == 0, 'requests queued before worker start'
         assert status['requests'] == app['requests']
+        assert app['latency'] == {'sum': 0, 'avg': 0, 'max': 0}
 
         for sock in socks:
             assert client._resp_to_dict(client.recvall(sock).decode())['status'] == 200
@@ -250,6 +267,10 @@ def test_status_requests_queued():
     assert client.conf_get('/status/requests') == {
         'total': 2, 'active': 0, 'completed': 2, 'failed': 0,
     }
+    latency = client.conf_get('/status/latency')
+    assert latency['avg'] == latency['sum'] // 2
+    assert latency['sum'] >= 3000, 'latency includes worker startup and queueing'
+    assert latency['max'] >= 1500
 
 
 def test_status_requests_outcomes():
@@ -314,8 +335,12 @@ def test_status_requests_timeout():
     })['status'] == 503
     expected = {'total': 1, 'active': 0, 'completed': 0, 'failed': 1}
     assert client.conf_get('/status/requests') == expected
+    latency = client.conf_get('/status/latency')
+    assert 800 <= latency['max'] < 2000, 'failed request timed until timeout'
+    assert latency['sum'] == latency['avg'] == latency['max']
     time.sleep(3)
     assert client.conf_get('/status/requests') == expected, 'late response not counted'
+    assert client.conf_get('/status/latency') == latency, 'late response not timed'
     assert client.conf_get('/status/responses') == {
         '1xx': 0, '2xx': 0, '3xx': 0, '4xx': 0, '5xx': 1,
     }
@@ -331,6 +356,9 @@ def test_status_requests_cancelled():
         assert client.conf_get('/status/requests') == {
             'total': 1, 'active': 1, 'completed': 0, 'failed': 0,
         }
+        assert client.conf_get('/status/latency') == {
+            'sum': 0, 'avg': 0, 'max': 0,
+        }
         assert client.conf_get('/status/responses') == {
             '1xx': 0, '2xx': 1, '3xx': 0, '4xx': 0, '5xx': 0,
         }
@@ -345,6 +373,8 @@ def test_status_requests_cancelled():
             break
         time.sleep(0.01)
     assert requests == expected
+    latency = client.conf_get('/status/latency')
+    assert latency['sum'] == latency['avg'] == latency['max']
     assert client.conf_get('/status/responses') == {
         '1xx': 0, '2xx': 1, '3xx': 0, '4xx': 0, '5xx': 0,
     }
@@ -358,6 +388,7 @@ def test_status_requests_reconfigure():
         }
         for _ in range(200):
             status = client.conf_get('/status')
+            check_latency(status)
             requests = {
                 name: app['requests']
                 for name, app in status['applications'].items()
@@ -434,6 +465,43 @@ def test_status_requests_reconfigure():
     })
     assert 'success' in client.conf_delete('applications/orders')
     check_requests({})
+    assert client.conf_get('/status/latency') == {
+        'sum': 0, 'avg': 0, 'max': 0,
+    }
+
+
+def test_status_latency():
+    apps = {name: app_default('single_thread') for name in ('slow', 'fast')}
+    for app in apps.values():
+        app['processes'] = 1
+    assert 'success' in client.conf({
+        'listeners': {
+            '*:8080': {'pass': 'applications/slow'},
+            '*:8081': {'pass': 'applications/fast'},
+        },
+        'applications': apps,
+    })
+    assert client.conf_get('/status/latency') == {
+        'sum': 0, 'avg': 0, 'max': 0,
+    }
+
+    for delay in ('0.1', '0.3'):
+        assert client.get(headers={
+            'Host': 'localhost', 'X-Delay': delay, 'Connection': 'close',
+        })['status'] == 200
+    assert client.get(port=8081, headers={
+        'Host': 'localhost', 'X-Delay': '0.05', 'Connection': 'close',
+    })['status'] == 200
+
+    status = client.conf_get('/status')
+    check_latency(status)
+    slow = status['applications']['slow']['latency']
+    fast = status['applications']['fast']['latency']
+    assert slow['sum'] >= 350
+    assert slow['max'] >= 250
+    assert fast['max'] >= 40
+    assert status['latency']['avg'] == (slow['sum'] + fast['sum']) // 3
+    assert client.conf_get('/status/applications/slow/latency') == slow
 
 
 def test_status_processes_global():
@@ -521,6 +589,7 @@ def test_status_processes_sampling():
 
     def sample_status():
         status = client.conf_get('/status')
+        check_latency(status)
         app = status['applications']['empty']
         processes = app['processes']
         assert processes['max'] == 4

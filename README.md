@@ -65,6 +65,7 @@ Query the `/status` API for server and application runtime statistics:
   and in total.
 - Busy and idle application workers, per application and in total.
 - HTTP response counts by status class, per application and in total.
+- Application request latency, per application and in total.
 
 Read `/status/applications/<name>/processes` for an application's worker-pool
 policy and current state:
@@ -130,6 +131,22 @@ responses. These counters describe response headers, not completed delivery.
 `/status/responses` sums the application counters in the same status response.
 Response counters follow the same configuration lifetime as request counters.
 Response counts are approximate under concurrent updates.
+
+`/status/applications/<name>/latency` returns `sum`, `avg`, and `max`, all in
+integer milliseconds. `sum` is the cumulative duration of completed and failed
+requests, `avg` is `sum / (requests.completed + requests.failed)` rounded down,
+and `max` is the longest duration. All fields are zero before any request ends.
+
+Latency starts when a request enters the application queue and ends when its
+response completes or its failure is detected. It includes queueing, worker
+startup, and application processing, but excludes request upload before entering
+the application and response delivery to the client. WebSocket requests are timed
+until the upgrade completes; frames and session closure add no samples.
+
+`/status/latency` sums application durations, computes the weighted average using
+the global completed and failed request counts, and takes the largest application
+maximum. Latency statistics are approximate and follow the request counters'
+configuration lifetime.
 
 Richer application-level statistics are a focus of ongoing development,
 supporting performance analysis, troubleshooting, and capacity planning.

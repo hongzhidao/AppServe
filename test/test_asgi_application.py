@@ -434,6 +434,7 @@ def test_asgi_application_worker_idle():
     def wait_for_state(active, idle, running=1):
         for _ in range(100):
             state = client.conf_get('/status/applications/single_thread')
+            state.pop('latency')
             if state == {
                 'processes': {
                     'max': 1,

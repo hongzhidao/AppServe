@@ -126,6 +126,8 @@ struct nxt_app_s {
     uint64_t                  completed_requests;
     uint64_t                  failed_requests;
     uint64_t                  responses[5];
+    uint64_t                  latency_sum;
+    uint64_t                  latency_max;
     uint32_t                  active_requests;
     uint32_t                  pending_processes;
     uint32_t                  processes;

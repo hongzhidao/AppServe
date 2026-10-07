@@ -109,6 +109,7 @@ def test_asgi_websockets_worker_idle():
     def wait_for_state(idle, running=1):
         for _ in range(100):
             state = client.conf_get('/status/applications/websockets%2Fmirror')
+            state.pop('latency')
             if state == {
                 'processes': {
                     'max': 1,
@@ -135,6 +136,8 @@ def test_asgi_websockets_worker_idle():
         assert client.conf_get('/status/responses') == {
             '1xx': 2, '2xx': 0, '3xx': 0, '4xx': 0, '5xx': 0,
         }
+        latency = client.conf_get('/status/latency')
+        assert latency['avg'] == latency['sum'] // 2
         socks[0].close()
         time.sleep(1.2)
         wait_for_state(0)
@@ -145,6 +148,7 @@ def test_asgi_websockets_worker_idle():
         socks[1].close()
         wait_for_state(1)
         wait_for_state(0, running=0)
+        assert client.conf_get('/status/latency') == latency, 'upgrade timed once'
     finally:
         for sock in socks:
             sock.close()

@@ -12,6 +12,7 @@ nxt_conf_value_t *
 nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
 {
     size_t            i, j;
+    uint64_t          count;
     nxt_str_t         name;
     nxt_int_t         ret;
     nxt_status_app_t  *app;
@@ -29,6 +30,9 @@ nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
     static nxt_str_t busy_str = nxt_string("busy");
     static nxt_str_t idle_str = nxt_string("idle");
     static nxt_str_t responses_str = nxt_string("responses");
+    static nxt_str_t latency_str = nxt_string("latency");
+    static nxt_str_t sum_str = nxt_string("sum");
+    static nxt_str_t avg_str = nxt_string("avg");
     static nxt_str_t response_classes[] = {
         nxt_string("1xx"),
         nxt_string("2xx"),
@@ -37,7 +41,7 @@ nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
         nxt_string("5xx"),
     };
 
-    status = nxt_conf_create_object(mp, 4);
+    status = nxt_conf_create_object(mp, 5);
     if (nxt_slow_path(status == NULL)) {
         return NULL;
     }
@@ -65,7 +69,7 @@ nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
     for (i = 0; i < report->apps_count; i++) {
         app = &report->apps[i];
 
-        app_obj = nxt_conf_create_object(mp, 3);
+        app_obj = nxt_conf_create_object(mp, 4);
         if (nxt_slow_path(app_obj == NULL)) {
             return NULL;
         }
@@ -114,6 +118,18 @@ nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
             nxt_conf_set_member_integer(obj, &response_classes[j],
                                         app->responses[j], j);
         }
+
+        obj = nxt_conf_create_object(mp, 3);
+        if (nxt_slow_path(obj == NULL)) {
+            return NULL;
+        }
+
+        count = app->completed_requests + app->failed_requests;
+        nxt_conf_set_member(app_obj, &latency_str, obj, 3);
+        nxt_conf_set_member_integer(obj, &sum_str, app->latency_sum, 0);
+        nxt_conf_set_member_integer(obj, &avg_str,
+                                    count != 0 ? app->latency_sum / count : 0, 1);
+        nxt_conf_set_member_integer(obj, &max_str, app->latency_max, 2);
     }
 
     obj = nxt_conf_create_object(mp, 2);
@@ -136,6 +152,18 @@ nxt_status_get(nxt_status_report_t *report, nxt_mp_t *mp)
         nxt_conf_set_member_integer(obj, &response_classes[j],
                                     report->responses[j], j);
     }
+
+    obj = nxt_conf_create_object(mp, 3);
+    if (nxt_slow_path(obj == NULL)) {
+        return NULL;
+    }
+
+    count = report->completed_requests + report->failed_requests;
+    nxt_conf_set_member(status, &latency_str, obj, 4);
+    nxt_conf_set_member_integer(obj, &sum_str, report->latency_sum, 0);
+    nxt_conf_set_member_integer(obj, &avg_str,
+                                count != 0 ? report->latency_sum / count : 0, 1);
+    nxt_conf_set_member_integer(obj, &max_str, report->latency_max, 2);
 
     return status;
 }

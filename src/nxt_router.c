@@ -558,6 +558,23 @@ nxt_queue_chk_remove(nxt_queue_link_t *lnk)
 
 
 nxt_inline void
+nxt_router_app_request_latency(nxt_task_t *task,
+    nxt_request_rpc_data_t *req_rpc_data)
+{
+    nxt_app_t   *app;
+    nxt_nsec_t  elapsed;
+
+    nxt_thread_time_update(task->thread);
+    elapsed = (nxt_thread_monotonic_time(task->thread)
+               - req_rpc_data->start_time) / 1000000;
+
+    app = req_rpc_data->app;
+    app->latency_sum += elapsed;
+    app->latency_max = nxt_max(app->latency_max, elapsed);
+}
+
+
+nxt_inline void
 nxt_request_rpc_data_unlink(nxt_task_t *task,
     nxt_request_rpc_data_t *req_rpc_data)
 {
@@ -570,6 +587,10 @@ nxt_request_rpc_data_unlink(nxt_task_t *task,
     app = req_rpc_data->app;
 
     if (req_rpc_data->app_port != NULL) {
+        if (req_rpc_data->apr_action != NXT_APR_CLOSE) {
+            nxt_router_app_request_latency(task, req_rpc_data);
+        }
+
         nxt_router_app_request_release(task, app, req_rpc_data->app_port,
                                        req_rpc_data->app_process,
                                        req_rpc_data->apr_action);
@@ -927,6 +948,8 @@ nxt_router_status_handler(nxt_task_t *task, nxt_port_recv_msg_t *msg)
         app_stat->active_requests = app->active_requests;
         app_stat->completed_requests = app->completed_requests;
         app_stat->failed_requests = app->failed_requests;
+        app_stat->latency_sum = app->latency_sum;
+        app_stat->latency_max = app->latency_max;
         app_stat->max_processes = app->max_processes;
         app_stat->spare_processes = app->spare_processes;
         app_stat->busy_processes = (processes > idle) ? processes - idle : 0;
@@ -936,6 +959,8 @@ nxt_router_status_handler(nxt_task_t *task, nxt_port_recv_msg_t *msg)
         report->active_requests += app_stat->active_requests;
         report->completed_requests += app_stat->completed_requests;
         report->failed_requests += app_stat->failed_requests;
+        report->latency_sum += app_stat->latency_sum;
+        report->latency_max = nxt_max(report->latency_max, app_stat->latency_max);
         report->busy_processes += app_stat->busy_processes;
         report->idle_processes += app_stat->idle_processes;
 
@@ -3550,6 +3575,7 @@ nxt_router_response_ready_handler(nxt_task_t *task, nxt_port_recv_msg_t *msg,
                 goto fail;
             }
 
+            nxt_router_app_request_latency(task, req_rpc_data);
             nxt_router_app_request_release(task, app, app_port,
                                            req_rpc_data->app_process,
                                            NXT_APR_UPGRADE);
@@ -4654,6 +4680,9 @@ nxt_router_app_port_get(nxt_task_t *task, nxt_app_t *app,
     nxt_http_request_t  *r;
 
     start_process = 0;
+
+    nxt_thread_time_update(task->thread);
+    req_rpc_data->start_time = nxt_thread_monotonic_time(task->thread);
 
     nxt_thread_mutex_lock(&app->mutex);
 
