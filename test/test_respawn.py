@@ -102,3 +102,47 @@ def test_respawn_application(skip_alert, unit_pid):
     assert wait_for_process(client.app_name, unit_pid) is not None
 
     smoke_test(unit_pid)
+
+def test_respawn_application_inflight_removed(skip_alert, unit_pid):
+    client.load('single_thread', client.app_name, processes=1)
+
+    sock = client.get(
+        headers={
+            'Host': 'localhost',
+            'X-Delay': '5',
+            'Connection': 'close',
+        },
+        no_recv=True,
+    )
+
+    try:
+        for _ in range(100):
+            status = client.conf_get('/status/applications/' + client.app_name)
+            if (status['requests']['active'] == 1
+                    and status['processes']['idle'] == 0):
+                break
+            time.sleep(0.01)
+
+        assert status['requests']['active'] == 1, 'request acknowledged'
+        assert status['processes']['idle'] == 0, 'worker handling request'
+
+        output = subprocess.check_output(['ps', 'axww']).decode()
+        match = re.search(
+            r'^\s*(\d+).*appserve: "' + client.app_name + r'" application',
+            output,
+            re.M,
+        )
+        assert match is not None, 'worker exists'
+        pid = match.group(1)
+
+        assert 'success' in client.conf({'listeners': {}, 'applications': {}})
+        skip_alert(r'app process %s exited on signal 9' % pid)
+        kill_pids(pid)
+
+        response = client._resp_to_dict(client.recvall(sock).decode())
+        assert response['status'] == 503, 'in-flight request failed'
+    finally:
+        sock.close()
+
+    client.load('empty', client.app_name, processes=1)
+    assert client.get()['status'] == 200, 'router still works'

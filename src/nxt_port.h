@@ -210,57 +210,49 @@ struct nxt_port_recv_msg_s {
 #define nxt_recv_msg_cmsg_pid_ref(msg)  (NULL)
 #endif
 
-typedef struct nxt_app_s  nxt_app_t;
+typedef void (*nxt_port_close_handler_t)(nxt_task_t *task, nxt_port_t *port);
 
 struct nxt_port_s {
-    nxt_fd_event_t      socket;
+    nxt_fd_event_t            socket;
 
-    nxt_queue_link_t    link;       /* for nxt_process_t.ports */
-    nxt_process_t       *process;
+    nxt_queue_link_t          link;       /* for nxt_process_t.ports */
+    nxt_process_t             *process;
 
-    nxt_queue_link_t    app_link;   /* for nxt_app_t.ports */
-    nxt_app_t           *app;
-
-    nxt_queue_link_t    idle_link;  /* for nxt_app_t.idle_ports */
-    nxt_msec_t          idle_start;
-
-    nxt_queue_t         messages;   /* of nxt_port_send_msg_t */
-    nxt_thread_mutex_t  write_mutex;
+    nxt_queue_t               messages;   /* of nxt_port_send_msg_t */
+    nxt_thread_mutex_t        write_mutex;
 
     /* Maximum size of message part. */
-    uint32_t            max_size;
+    uint32_t                  max_size;
     /* Maximum interleave of message parts. */
-    uint32_t            max_share;
+    uint32_t                  max_share;
 
-    uint32_t            active_websockets;
-    uint32_t            active_requests;
+    nxt_port_handler_t        handler;
+    nxt_port_handler_t        *data;
+    nxt_port_close_handler_t  close_handler;
 
-    nxt_port_handler_t  handler;
-    nxt_port_handler_t  *data;
+    nxt_mp_t                  *mem_pool;
+    nxt_event_engine_t        *engine;
 
-    nxt_mp_t            *mem_pool;
-    nxt_event_engine_t  *engine;
+    nxt_buf_t                 *free_bufs;
+    nxt_socket_t              pair[2];
 
-    nxt_buf_t           *free_bufs;
-    nxt_socket_t        pair[2];
+    nxt_port_id_t             id;
+    nxt_pid_t                 pid;
 
-    nxt_port_id_t       id;
-    nxt_pid_t           pid;
+    nxt_lvlhsh_t              rpc_streams; /* stream to nxt_port_rpc_reg_t */
+    nxt_lvlhsh_t              rpc_peers;   /* peer to queue of rpc_reg_t */
 
-    nxt_lvlhsh_t        rpc_streams; /* stream to nxt_port_rpc_reg_t */
-    nxt_lvlhsh_t        rpc_peers;   /* peer to queue of nxt_port_rpc_reg_t */
+    nxt_lvlhsh_t              frags;
 
-    nxt_lvlhsh_t        frags;
+    nxt_atomic_t              use_count;
 
-    nxt_atomic_t        use_count;
+    nxt_process_type_t        type;
 
-    nxt_process_type_t  type;
+    nxt_fd_t                  queue_fd;
+    void                      *queue;
 
-    nxt_fd_t            queue_fd;
-    void                *queue;
-
-    void                *socket_msg;
-    int                 from_socket;
+    void                      *socket_msg;
+    int                       from_socket;
 };
 
 

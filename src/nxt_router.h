@@ -94,51 +94,66 @@ typedef struct {
 } nxt_app_joint_t;
 
 
+typedef struct {
+    nxt_process_t         *process;
+    nxt_app_t             *app;
+    nxt_port_t            *port;
+
+    nxt_queue_link_t      link;
+    nxt_queue_link_t      idle_link;
+    nxt_msec_t            idle_start;
+
+    uint32_t              active_requests;
+    uint32_t              active_websockets;
+    nxt_atomic_t          use_count;  /* App ownership and in-flight requests. */
+} nxt_router_app_process_t;
+
+
 struct nxt_app_s {
-    nxt_thread_mutex_t     mutex;       /* Protects worker and request state. */
-    nxt_queue_t            ports;       /* Worker ports, one per process. */
-    nxt_lvlhsh_t           port_hash;   /* Worker ports, keyed by PID and ID. */
+    nxt_thread_mutex_t        mutex;   /* Protects worker and request state. */
+    nxt_queue_t               process_list; /* of nxt_router_app_process_t */
+    nxt_lvlhsh_t              process_hash; /* Workers, keyed by PID. */
 
-    nxt_queue_t            spare_ports; /* of nxt_port_t.idle_link */
-    nxt_queue_t            idle_ports;  /* of nxt_port_t.idle_link */
-    nxt_work_t             adjust_idle_work;
-    nxt_event_engine_t     *engine;
+    nxt_queue_t               spare_process_list; /* of app process idle_link */
+    nxt_queue_t               idle_process_list;  /* of app process idle_link */
+    nxt_work_t                adjust_idle_work;
+    nxt_event_engine_t        *engine;
 
-    nxt_str_t              name;
+    nxt_str_t                 name;
 
-    uint32_t               active_requests;
-    uint32_t               pending_processes;
-    uint32_t               processes;
-    uint32_t               idle_processes;
+    uint32_t                  active_requests;
+    uint32_t                  pending_processes;
+    uint32_t                  processes;
+    uint32_t                  idle_processes;
 
-    uint32_t               max_processes;
-    uint32_t               spare_processes;
-    uint32_t               max_pending_processes;
+    uint32_t                  max_processes;
+    uint32_t                  spare_processes;
+    uint32_t                  max_pending_processes;
 
-    uint32_t               generation;
-    uint32_t               proto_port_requests;
+    uint32_t                  generation;
+    uint32_t                  proto_port_requests;
 
-    nxt_msec_t             timeout;
-    nxt_msec_t             idle_timeout;
+    nxt_msec_t                timeout;
+    nxt_msec_t                idle_timeout;
 
-    nxt_str_t              *targets;
-    uint32_t               targets_count;
+    nxt_str_t                 *targets;
+    uint32_t                  targets_count;
 
-    nxt_app_type_t         type:8;
+    nxt_app_type_t            type:8;
 
-    nxt_mp_t               *mem_pool;
-    nxt_queue_link_t       link;
+    nxt_mp_t                  *mem_pool;
+    nxt_queue_link_t          link;
 
-    nxt_str_t              conf;
+    nxt_str_t                 conf;
 
-    nxt_atomic_t           use_count;
-    nxt_queue_t            ack_waiting_req; /* of nxt_http_request_t.app_link */
+    nxt_atomic_t              use_count;
+    nxt_queue_t               ack_waiting_req; /* of http request app_link */
 
-    nxt_app_joint_t        *joint;
-    nxt_port_t             *shared_port;
-    nxt_port_t             *proto_port;
+    nxt_app_joint_t           *joint;
+    nxt_port_t                *shared_port;
+    nxt_router_app_process_t  *prototype;
 
-    nxt_port_mmaps_t       outgoing;
+    nxt_port_mmaps_t          outgoing;
 };
 
 
@@ -201,7 +216,6 @@ typedef struct {
 
 void nxt_router_process_http_request(nxt_task_t *task, nxt_http_request_t *r,
     nxt_http_pass_t *pass);
-void nxt_router_app_port_close(nxt_task_t *task, nxt_port_t *port);
 nxt_int_t nxt_router_application_init(nxt_router_conf_t *rtcf, nxt_str_t *name,
     nxt_str_t *target, nxt_http_pass_t *pass);
 void nxt_router_listen_event_release(nxt_task_t *task, nxt_listen_event_t *lev,

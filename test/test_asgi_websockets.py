@@ -1,4 +1,6 @@
+import re
 import struct
+import subprocess
 import time
 from distutils.version import LooseVersion
 
@@ -1534,3 +1536,46 @@ def test_asgi_websockets_client_locks_app():
     assert message == frame['data'].decode('utf-8'), 'client'
 
     sock.close()
+
+def test_asgi_websockets_worker_exit_removed(skip_alert, unit_pid):
+    name = 'websocket-worker-exit-' + str(unit_pid)
+    client.load('websockets/mirror', name=name, processes=1)
+
+    response, sock, _ = ws.upgrade()
+
+    try:
+        assert response['status'] == 101
+        ws.frame_write(sock, ws.OP_TEXT, 'before exit')
+        assert ws.frame_read(sock)['data'] == b'before exit'
+
+        output = subprocess.check_output(['ps', 'axww']).decode()
+        match = re.search(
+            r'^\s*(\d+).*appserve: "' + name + r'" application',
+            output,
+            re.M,
+        )
+        assert match is not None, 'worker exists'
+        pid = match.group(1)
+
+        assert 'success' in client.conf({'listeners': {}, 'applications': {}})
+        skip_alert(r'app process %s exited on signal 9' % pid)
+        subprocess.check_call(['kill', '-9', pid])
+
+        for _ in range(100):
+            status = client.conf_get('/status/connections')
+            if status['active'] == 0:
+                break
+            time.sleep(0.01)
+
+        assert status['active'] == 0, 'WebSocket released after worker exit'
+    finally:
+        sock.close()
+
+    client.load('websockets/mirror', name=name, processes=1)
+    response, sock, _ = ws.upgrade()
+    try:
+        assert response['status'] == 101
+        ws.frame_write(sock, ws.OP_TEXT, 'after exit')
+        assert ws.frame_read(sock)['data'] == b'after exit'
+    finally:
+        sock.close()
